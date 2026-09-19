@@ -1,0 +1,100 @@
+:root {
+  --color-bg: #f7f9fc;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f4f7fb;
+  --color-glass: rgba(255, 255, 255, 0.76);
+  --color-text: #152033;
+  --color-text-secondary: #526075;
+  --color-muted: #8995a8;
+  --color-border: #e1e7f0;
+  --color-border-strong: #cdd7e5;
+  --color-primary: #5b5bd6;
+  --color-primary-soft: #eef2ff;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+
+  --shadow-soft: 0 3px 14px rgba(42, 61, 89, 0.04);
+  --shadow-card: 0 7px 22px rgba(42, 61, 89, 0.055);
+  --shadow-hover: 0 12px 28px rgba(42, 61, 89, 0.09);
+  --shadow-float: 0 16px 38px rgba(65, 78, 148, 0.14);
+
+  --transition-fast: 180ms ease;
+  --transition-normal: 220ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-width: 100%;
+  min-height: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  /*
+   * 始终为纵向滚动条预留空间，
+   * 防止不同页面切换时左右跳动。
+   */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+body {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100vh;
+
+  margin: 0;
+  padding: 0;
+
+  background: var(--color-bg);
+
+  font-family:
+    Inter,
+    "PingFang SC",
+    "Microsoft YaHei",
+    Arial,
+    sans-serif;
+
+  color: var(--color-text);
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+
+  margin: 0;
+  padding: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(91, 91, 214, 0.24);
+  outline-offset: 3px;
+}

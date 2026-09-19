@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "type": "news",
+    "category": "通知",
+    "date": "2026-09-07",
+    "title": "信息系统近期升级维护通知",
+    "description": "部分内部信息系统将进行例行升级维护，请相关人员提前做好工作安排。",
+    "buttonText": "查看详情",
+    "image": "",
+    "action": {
+      "type": "route",
+      "target": "/news/1"
+    }
+  },
+  {
+    "id": 2,
+    "type": "news",
+    "category": "宣贯",
+    "date": "2026-09-05",
+    "title": "网络与信息安全工作宣传提示",
+    "description": "加强账号安全、密码管理及异常邮件识别，提升信息安全防范意识。",
+    "buttonText": "查看详情",
+    "image": "",
+    "action": {
+      "type": "route",
+      "target": "/news/2"
+    }
+  },
+  {
+    "id": 3,
+    "type": "news",
+    "category": "行业动态",
+    "date": "2026-09-03",
+    "title": "新能源充电行业近期技术动态",
+    "description": "关注充电设施智能化、设备运维及能源管理相关技术发展。",
+    "buttonText": "查看详情",
+    "image": "",
+    "action": {
+      "type": "route",
+      "target": "/news/3"
+    }
+  }
+]

@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>充电桩枪数据转换工具 V4.3.5</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#eef2f7;--surface:rgba(255,255,255,.84);--surface2:rgba(247,249,252,.86);--line:rgba(211,219,231,.84);--line2:#c8d2df;
+  --text:#172033;--text2:#4c586c;--muted:#8a95a8;--navy:#081739;--navy2:#06112c;
+  --blue:#3a63ba;--blueSoft:rgba(235,242,255,.88);--green:#00a665;--greenSoft:rgba(237,249,244,.92);
+  --orange:#ff9700;--orangeSoft:#fff7e8;--red:#d92d20;--redSoft:#fff1f1;
+  --radius:14px;--radiusSm:10px;
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",Arial,sans-serif;
+  background:
+    radial-gradient(circle at 86% 8%, rgba(72,122,213,.13), transparent 26%),
+    radial-gradient(circle at 8% 78%, rgba(0,166,101,.08), transparent 28%),
+    linear-gradient(145deg,#f3f6fa 0%,#edf2f7 48%,#f5f7fa 100%);
+  background-attachment:fixed;
+}
+body:before,body:after{
+  content:"";position:fixed;pointer-events:none;z-index:-1;filter:blur(14px)
+}
+body:before{
+  width:360px;height:360px;right:-90px;top:80px;border-radius:50%;
+  background:radial-gradient(circle,rgba(62,105,193,.10),transparent 70%);
+}
+body:after{
+  width:320px;height:320px;left:-110px;bottom:40px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,166,101,.07),transparent 72%);
+}
+button,input{font:inherit}
+.container{max-width:1480px;margin:0 auto;padding:26px 22px 44px}
+.app-header{
+  position:relative;display:flex;align-items:center;justify-content:space-between;gap:20px;
+  background:
+    radial-gradient(circle at 88% 20%,rgba(95,142,232,.22),transparent 30%),
+    linear-gradient(135deg,rgba(8,23,57,.97),rgba(10,28,69,.93));
+  border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:22px 24px;margin-bottom:16px;
+  box-shadow:0 18px 44px rgba(5,18,44,.13),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);overflow:hidden
+}
+.app-header:before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:4px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#ffb12a,var(--orange))}
+.app-header:after{
+  content:"";position:absolute;right:-40px;top:-70px;width:260px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(100,158,255,.16),transparent 68%);pointer-events:none
+}
+h1{margin:0;color:#fff;font-size:25px;letter-spacing:-.4px}
+.subtitle{margin:7px 0 0;color:#cbd5ea;font-size:13px;font-weight:500}
+.version{
+  position:relative;z-index:1;color:#fff;font-size:12px;font-weight:800;
+  border:1px solid rgba(255,255,255,.20);background:rgba(255,255,255,.08);
+  border-radius:999px;padding:7px 11px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+}
+.panel{
+  background:var(--surface);border:1px solid rgba(207,217,230,.82);border-radius:var(--radius);
+  margin-bottom:14px;overflow:hidden;
+  box-shadow:0 10px 30px rgba(33,53,86,.055),inset 0 1px 0 rgba(255,255,255,.75);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)
+}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:16px 19px;border-bottom:1px solid rgba(215,223,233,.82);
+  background:linear-gradient(180deg,rgba(255,255,255,.44),rgba(248,250,253,.18))
+}
+.panel-body{padding:18px 19px}
+.section-title{display:flex;align-items:center;gap:10px}
+.step{
+  width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,#eef4ff,#e9f0ff);
+  color:var(--blue);display:grid;place-items:center;font-size:12px;font-weight:900;
+  border:1px solid rgba(58,99,186,.12);box-shadow:0 4px 12px rgba(58,99,186,.08)
+}
+h2{font-size:17px;margin:0}
+.head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field label,.label{display:block;margin-bottom:7px;font-size:13px;font-weight:700;color:var(--text2)}
+.field input[type=text],.small-input,.search-input{
+  width:100%;height:40px;padding:0 11px;border:1px solid rgba(196,207,221,.96);border-radius:var(--radiusSm);
+  background:rgba(255,255,255,.92);color:var(--text);outline:none;transition:.18s ease;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.82)
+}
+.field input:focus,.small-input:focus,.search-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(54,93,176,.1)}
+.options-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.option-block{
+  padding:13px;border:1px solid rgba(215,223,233,.88);border-radius:11px;
+  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(247,249,252,.72));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.86)
+}
+.option-row{display:flex;gap:7px;flex-wrap:wrap}
+.tag{
+  display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;
+  border:1px solid rgba(199,209,222,.96);border-radius:9px;background:rgba(255,255,255,.9);
+  color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;user-select:none;
+  transition:.16s ease;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)
+}
+.tag:hover{background:#f9fafb}
+.tag.active{border-color:rgba(58,99,186,.70);background:linear-gradient(180deg,#f4f7ff,#eaf1ff);color:var(--navy);box-shadow:0 0 0 3px rgba(58,99,186,.07),0 5px 13px rgba(58,99,186,.06)}
+.persist-note{font-size:11px;color:var(--muted);margin-top:9px}
+.file-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.file-card{
+  border:1px dashed rgba(183,197,214,.95);border-radius:12px;padding:14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(246,249,252,.72));
+  transition:.18s ease;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)
+}
+.file-card.drag{border-color:var(--blue);background:rgba(236,243,255,.92);box-shadow:0 0 0 4px rgba(58,99,186,.08)}
+.file-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.file-title{font-size:14px;font-weight:800}
+.file-type{font-size:11px;color:var(--muted);padding:3px 7px;background:#fff;border:1px solid var(--line);border-radius:6px}
+input[type=file]{width:100%;min-height:40px;padding:5px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--text2);font-size:12px}
+input[type=file]::file-selector-button{border:0;border-radius:7px;background:#eef1f8;color:var(--navy);padding:7px 10px;margin-right:9px;font-weight:800;cursor:pointer}
+.file-name{margin-top:7px;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mapping-note{
+  display:flex;align-items:flex-start;gap:9px;margin-top:13px;padding:10px 11px;
+  border:1px solid rgba(202,214,231,.82);border-radius:10px;
+  background:linear-gradient(180deg,rgba(248,251,255,.86),rgba(243,247,252,.80));
+  color:var(--text2);font-size:12px;line-height:1.5;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85)
+}
+.mapping-dot{width:7px;height:7px;margin-top:5px;border-radius:50%;background:var(--green);flex:none}
+.action-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}
+.action-left,.action-right{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  min-height:38px;padding:0 14px;border:1px solid transparent;border-radius:9px;
+  font-size:13px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:transform .14s ease,box-shadow .14s ease,background .14s ease,border-color .14s ease
+}
+.btn.primary{
+  background:linear-gradient(135deg,#4974ca 0%,#365db0 56%,#183c85 100%);color:#fff;
+  box-shadow:0 8px 18px rgba(54,93,176,.18),inset 0 1px 0 rgba(255,255,255,.16)
+}
+.btn.primary:hover{background:linear-gradient(135deg,#426dc2,#0a1941);transform:translateY(-1px);box-shadow:0 11px 22px rgba(35,66,131,.22),0 0 0 3px rgba(58,99,186,.06)}
+.btn.primary:active{transform:translateY(0);box-shadow:0 5px 12px rgba(35,66,131,.16)}
+.btn.secondary{background:rgba(255,255,255,.84);border-color:rgba(198,208,221,.95);color:#374151;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+.btn.secondary:hover{background:#fff;transform:translateY(-1px);box-shadow:0 6px 14px rgba(43,59,86,.07)}
+.btn.danger{background:var(--redSoft);border-color:#f3b5b0;color:var(--red)}.btn.danger:hover{background:var(--red);border-color:var(--red);color:#fff}
+.btn.mini{min-height:30px;padding:0 9px;font-size:12px;border-radius:7px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.status{min-height:18px;margin-top:11px;color:var(--muted);font-size:12px;line-height:1.5}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
+.metric{
+  border:1px solid rgba(213,221,231,.88);border-radius:11px;
+  background:linear-gradient(180deg,rgba(255,255,255,.80),rgba(246,249,252,.72));padding:12px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.88),0 5px 16px rgba(36,52,77,.035)
+}
+.metric-label{font-size:11px;color:var(--muted);font-weight:700}
+.metric-value{font-size:22px;font-weight:800;margin-top:4px}
+.metric.error .metric-value{color:var(--red)}.metric.warn .metric-value{color:#d97706}.metric.ok .metric-value{color:var(--green)}
+.validation-toolbar,.result-toolbar,.mapping-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:13px}
+.filter-group,.tabs{display:flex;gap:4px;padding:3px;background:rgba(233,238,246,.88);border:1px solid rgba(216,223,233,.78);border-radius:10px}
+.filter-btn,.tab-btn{border:0;background:transparent;color:#687386;border-radius:7px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer}
+.filter-btn.active,.tab-btn.active{background:rgba(255,255,255,.96);color:var(--navy);box-shadow:0 4px 10px rgba(10,25,65,.07),inset 0 1px 0 rgba(255,255,255,.9)}
+.issue-list{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.issue-row{display:grid;grid-template-columns:72px 120px 1fr;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px;align-items:start}
+.issue-row:last-child{border-bottom:0}
+.issue-badge{display:inline-flex;align-items:center;justify-content:center;width:48px;padding:3px 0;border-radius:6px;font-size:11px;font-weight:800}
+.issue-badge.error{background:var(--redSoft);color:var(--red)}.issue-badge.warn{background:var(--orangeSoft);color:#b45309}.issue-badge.info{background:var(--blueSoft);color:var(--blue)}
+.issue-type{font-weight:800;color:var(--text2)}.issue-detail{color:var(--text2);line-height:1.45}
+.validation-empty{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+.result-tools-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.search-input{width:230px;height:34px;font-size:12px}
+.counts{display:flex;gap:7px}.count-chip{font-size:12px;color:var(--text2);padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:#fff}
+.table-wrap{overflow:auto;max-height:560px;background:#fff}
+table{border-collapse:separate;border-spacing:0;min-width:1400px;width:100%;font-size:12px}
+th,td{padding:9px 11px;white-space:nowrap;border-bottom:1px solid #edf0f3;border-right:1px solid #f1f3f5;text-align:left}
+th{position:sticky;top:0;z-index:3;background:linear-gradient(180deg,#f6f8fb,#eef3f8);color:#263653;font-weight:800;border-bottom:1px solid var(--line2);box-shadow:0 1px 0 rgba(255,255,255,.8) inset}
+td{color:#374151}
+tr:hover td{background:#f7f9fd}
+td.editable{cursor:text}.editable:focus{outline:2px solid rgba(54,93,176,.22);outline-offset:-2px;background:#fff}
+.empty-state{display:grid;place-items:center;min-height:190px;padding:26px;text-align:center;color:var(--muted)}
+.empty-title{font-size:14px;font-weight:800;color:var(--text2);margin-bottom:5px}.empty-desc{font-size:12px}
+.mapping-panel-body{display:none}
+.mapping-panel-body.open{display:block}
+.mapping-editor{display:grid;grid-template-columns:180px 1fr auto auto;gap:8px;margin-top:12px}
+.mapping-table{min-width:760px}
+.mapping-table th:nth-child(1){width:90px}.mapping-table th:nth-child(4){width:150px}
+.mapping-type-badge{font-size:11px;padding:3px 7px;border-radius:6px;background:var(--blueSoft);color:var(--blue);font-weight:800}
+.inline-note{font-size:11px;color:var(--muted)}
+.footer{text-align:center;color:#96a0ae;font-size:11px;padding-top:10px;letter-spacing:.2px}
+.hidden{display:none!important}
+@media(max-width:1050px){.metrics{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){
+ .container{padding:16px 12px 28px}.config-grid,.file-grid,.options-grid{grid-template-columns:1fr}
+ .action-bar{flex-direction:column;align-items:stretch}.action-left,.action-right{width:100%}.action-left .btn,.action-right .btn{flex:1}
+ .mapping-editor{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+ .version{display:none}h1{font-size:20px}.metrics{grid-template-columns:1fr 1fr}
+ .issue-row{grid-template-columns:60px 90px 1fr}.mapping-editor{grid-template-columns:1fr}.search-input{width:100%}
+}
+
+.basic-options-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.brand-precision-panel{
+  margin-top:13px;border:1px solid rgba(210,219,230,.88);border-radius:12px;
+  background:rgba(255,255,255,.76);overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.88),0 8px 20px rgba(36,52,77,.035);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+}
+.brand-precision-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 13px;background:linear-gradient(180deg,rgba(248,250,253,.86),rgba(243,247,251,.70));
+  border-bottom:1px solid rgba(216,224,233,.86)
+}
+.brand-precision-title{font-size:13px;font-weight:800;color:var(--text)}
+.precision-state{
+  flex:none;font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px;border:1px solid var(--line)
+}
+.precision-state.waiting{color:var(--muted);background:#fff}
+.precision-state.pending{color:#b45309;background:var(--orangeSoft);border-color:#f5d39d}
+.precision-state.ready{color:var(--green);background:var(--greenSoft);border-color:#bcebd6}
+.precision-state.error{color:var(--red);background:var(--redSoft);border-color:#f3b5b0}
+.brand-precision-list{padding:0 13px}
+.brand-precision-row{
+  display:grid;grid-template-columns:minmax(170px,1fr) 100px minmax(220px,1fr);
+  gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #edf0f3
+}
+.brand-precision-row:last-child{border-bottom:0}
+.brand-name{font-size:13px;font-weight:800;color:var(--text)}
+.brand-model-note{margin-top:3px;font-size:11px;color:var(--muted)}
+.brand-count{font-size:12px;color:var(--text2)}
+.brand-count strong{font-size:14px;color:var(--navy)}
+.brand-precision-options{display:flex;align-items:center;gap:7px;justify-content:flex-start;flex-wrap:wrap}
+.precision-choice{
+  min-height:33px;padding:0 12px;border:1px solid rgba(196,207,220,.95);border-radius:8px;
+  background:rgba(255,255,255,.90);color:var(--text2);font-size:12px;font-weight:800;cursor:pointer;
+  transition:.15s ease;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)
+}
+.precision-choice:hover{background:#f9fafb}
+.precision-choice.active{border-color:rgba(58,99,186,.72);background:linear-gradient(180deg,#f4f7ff,#eaf1ff);color:var(--navy);box-shadow:0 0 0 3px rgba(58,99,186,.07),0 5px 12px rgba(58,99,186,.06)}
+.brand-precision-empty{padding:18px 0;text-align:center;color:var(--muted);font-size:12px}
+.brand-precision-error{padding:13px 0;color:var(--red);font-size:12px;line-height:1.5}
+@media(max-width:900px){
+ .basic-options-grid{grid-template-columns:1fr}
+ .brand-precision-row{grid-template-columns:1fr;gap:7px}
+}
+
+
+.validation-empty.success{
+  color:#087443;
+  background:linear-gradient(180deg,rgba(240,251,246,.97),rgba(233,248,241,.94));
+  border-top:1px solid rgba(0,166,101,.10);
+  font-weight:800;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 0 22px rgba(0,166,101,.045);
+}
+.validation-summary-success{
+  color:var(--green)!important;
+  font-weight:800;
+}
+.audit-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end}
+.audit-actions{display:flex;gap:8px;flex-wrap:wrap}
+.audit-result{margin-top:14px;border:1px solid var(--line);border-radius:9px;overflow:auto;max-height:430px;background:#fff}
+.audit-result table{min-width:840px}
+.audit-result code{font-family:Consolas,"SFMono-Regular",monospace;font-size:12px;color:var(--navy);white-space:nowrap}
+.space-marker{display:inline-block;margin-left:4px;padding:2px 6px;border-radius:5px;background:#fff0f0;color:#b42318;font-size:11px;font-weight:800}
+.audit-success{padding:22px;text-align:center;color:#087443;font-weight:800;background:linear-gradient(180deg,rgba(240,251,246,.97),rgba(233,248,241,.94))}
+@media(max-width:760px){.audit-grid{grid-template-columns:1fr}.audit-actions{width:100%}.audit-actions .btn{flex:1}}
+
+</style>
+</head>
+<body>
+<div class="container">
+<header class="app-header">
+  <div><h1>充电桩枪数据转换工具</h1><p class="subtitle">@信息运维部2026</p></div>
+  <div class="version">V4.3.5</div>
+</header>
+
+<section class="panel">
+ <div class="panel-head"><div class="section-title"><span class="step">01</span><h2>基础配置</h2></div></div>
+ <div class="panel-body">
+  <div class="config-grid">
+   <div class="field"><label>站点编号</label><input id="stationCode" type="text" placeholder="请输入站点编号" autocomplete="off"></div>
+   <div class="field"><label>所属站点名称</label><input id="stationName" type="text" placeholder="请输入所属站点名称" autocomplete="off"></div>
+  </div>
+  <div class="options-grid basic-options-grid">
+   <div class="option-block"><span class="label">是否开放</span><div class="option-row"><span id="openYes" class="tag active">是</span><span id="openNo" class="tag">否</span></div></div>
+   <div class="option-block"><span class="label">充电方式</span><div class="option-row"><span class="tag active charge">VIN码</span><span class="tag charge">刷卡</span><span class="tag charge">扫码</span></div></div>
+  </div>
+ </div>
+</section>
+
+<section class="panel">
+ <div class="panel-head"><div class="section-title"><span class="step">02</span><h2>文件导入与转换</h2></div></div>
+ <div class="panel-body">
+  <div class="file-grid">
+   <div class="file-card" id="pileDrop">
+    <div class="file-card-top"><div class="file-title">充电桩文件</div><div class="file-type">Excel / 可拖入</div></div>
+    <input type="file" id="pileFile" accept=".xlsx,.xls">
+    <div class="file-name" id="pileFileName">尚未选择文件</div>
+   </div>
+   <div class="file-card" id="gunDrop">
+    <div class="file-card-top"><div class="file-title">充电枪文件</div><div class="file-type">Excel / 可拖入</div></div>
+    <input type="file" id="gunFile" accept=".xlsx,.xls">
+    <div class="file-name" id="gunFileName">尚未选择文件</div>
+   </div>
+  </div>
+  <div class="mapping-note"><span class="mapping-dot"></span><span id="mappingNote"></span></div>
+
+  <div id="brandPrecisionPanel" class="brand-precision-panel">
+   <div class="brand-precision-head">
+    <div>
+     <div class="brand-precision-title">品牌电量精度配置</div>
+     <div id="brandPrecisionSummary" class="inline-note">上传充电桩文件后，自动识别本站品牌并在此设置电量精度。</div>
+    </div>
+    <div id="brandPrecisionState" class="precision-state waiting">待识别</div>
+   </div>
+   <div id="brandPrecisionList" class="brand-precision-list">
+    <div class="brand-precision-empty">请先选择或拖入充电桩 Excel 文件</div>
+   </div>
+  </div>
+
+  <div class="action-bar">
+   <div class="action-left">
+    <button class="btn primary" onclick="convert()">开始转换</button>
+    <button class="btn secondary" onclick="exportExcel()">导出 Excel</button>
+    <button class="btn secondary" onclick="copyData(false)">复制当前数据</button>
+    <button class="btn secondary" onclick="exportIssues()">导出异常</button>
+   </div>
+   <div class="action-right"><button class="btn danger" onclick="resetTool()">清空重置</button></div>
+  </div>
+  <div id="convertStatus" class="status"></div>
+ </div>
+</section>
+
+<section class="panel">
+ <div class="panel-head"><div class="section-title"><span class="step">03</span><h2>数据校验</h2></div><div class="inline-note" id="validationSummary">尚未执行转换</div></div>
+ <div class="panel-body">
+  <div class="metrics">
+   <div class="metric"><div class="metric-label">充电桩</div><div class="metric-value" id="metricPile">0</div></div>
+   <div class="metric"><div class="metric-label">充电枪</div><div class="metric-value" id="metricGun">0</div></div>
+   <div class="metric ok"><div class="metric-label">映射命中</div><div class="metric-value" id="metricMatched">0</div></div>
+   <div class="metric warn"><div class="metric-label">未识别型号</div><div class="metric-value" id="metricUnmapped">0</div></div>
+   <div class="metric error"><div class="metric-label">错误</div><div class="metric-value" id="metricErrors">0</div></div>
+   <div class="metric warn"><div class="metric-label">警告</div><div class="metric-value" id="metricWarnings">0</div></div>
+  </div>
+  <div class="validation-toolbar">
+   <div class="filter-group">
+    <button class="filter-btn active" data-filter="all" onclick="setIssueFilter('all',this)">全部</button>
+    <button class="filter-btn" data-filter="error" onclick="setIssueFilter('error',this)">错误</button>
+    <button class="filter-btn" data-filter="warn" onclick="setIssueFilter('warn',this)">警告</button>
+    <button class="filter-btn" data-filter="info" onclick="setIssueFilter('info',this)">提示</button>
+   </div>
+   <div class="inline-note">异常会标明数据类型和行号，便于回到源文件核对。</div>
+  </div>
+  <div id="issueList" class="issue-list"><div class="validation-empty">转换后自动生成校验结果</div></div>
+ </div>
+</section>
+
+<section class="panel">
+ <div class="panel-head">
+  <div class="section-title"><span class="step">04</span><h2>转换结果</h2></div>
+  <div class="head-actions">
+   <div class="tabs"><button id="pileTab" class="tab-btn active" onclick="showTable('pile')">充电桩</button><button id="gunTab" class="tab-btn" onclick="showTable('gun')">充电枪</button></div>
+   <div class="counts"><span id="pileCount" class="count-chip">桩 0 条</span><span id="gunCount" class="count-chip">枪 0 条</span></div>
+  </div>
+ </div>
+ <div class="panel-body" style="padding-bottom:10px">
+  <div class="result-toolbar" style="margin-top:0">
+   <div class="result-tools-left">
+    <input id="resultSearch" class="search-input" type="text" placeholder="搜索当前结果…" oninput="showTable(current)">
+    <button class="btn secondary mini" onclick="resortData()">恢复原始顺序</button>
+   </div>
+   <div class="inline-note">可直接编辑。</div>
+  </div>
+ </div>
+ <div id="result" class="table-wrap"><div class="empty-state"><div><div class="empty-title">暂无转换结果</div><div class="empty-desc">完成配置并选择桩、枪 Excel 后点击“开始转换”</div></div></div></div>
+</section>
+
+<section class="panel">
+ <div class="panel-head">
+  <div class="section-title"><span class="step">05</span><h2>Excel 尾部空格核查</h2></div>
+  <div class="inline-note" id="auditSummary">尚未核查文件</div>
+ </div>
+ <div class="panel-body">
+  <div class="audit-grid">
+   <div class="file-card" id="auditDrop">
+    <div class="file-card-top"><div class="file-title">待核查文件</div><div class="file-type">Excel / 可拖入</div></div>
+    <input type="file" id="auditFile" accept=".xlsx,.xls">
+    <div class="file-name" id="auditFileName">尚未选择文件</div>
+   </div>
+   <div class="audit-actions">
+    <button class="btn primary" onclick="auditWorkbook()">开始核查</button>
+    <button class="btn secondary" onclick="exportAuditIssues()">导出核查结果</button>
+    <button class="btn danger" onclick="resetAudit()">清空</button>
+   </div>
+  </div>
+  <div class="mapping-note"><span class="mapping-dot"></span><span>扫描全部工作表；检查仅由数字组成、但末尾含空格或其他空白字符的单元格，不会修改原文件。</span></div>
+  <div id="auditResult" class="audit-result"><div class="validation-empty">上传一个 Excel 文件后点击“开始核查”</div></div>
+ </div>
+</section>
+
+<section class="panel">
+ <div class="panel-head">
+  <div class="section-title"><span class="step">06</span><h2>映射维护</h2></div>
+  <div class="head-actions"><span class="inline-note" id="mappingCountText"></span><button class="btn secondary mini" id="mappingToggleBtn" onclick="toggleMappingPanel()">展开维护</button></div>
+ </div>
+ <div id="mappingPanelBody" class="panel-body mapping-panel-body">
+  <div class="mapping-toolbar" style="margin-top:0">
+   <div class="tabs"><button id="mapPileTab" class="tab-btn active" onclick="setMappingType('pile')">桩映射</button><button id="mapGunTab" class="tab-btn" onclick="setMappingType('gun')">枪映射</button></div>
+   <div class="head-actions">
+    <input id="mappingSearch" class="search-input" placeholder="搜索品牌或型号…" oninput="renderMappingTable()">
+    <button class="btn secondary mini" onclick="document.getElementById('mappingImportFile').click()">导入映射</button>
+    <input id="mappingImportFile" class="hidden" type="file" accept=".xlsx,.xls" onchange="importMappings(this.files[0]);this.value=''">
+    <button class="btn secondary mini" onclick="exportMappings()">导出映射</button>
+    <button class="btn danger mini" onclick="restoreDefaultMappings()">恢复默认</button>
+   </div>
+  </div>
+  <div class="mapping-editor">
+   <input id="mappingBrand" class="small-input" placeholder="品牌名称">
+   <input id="mappingModel" class="small-input" placeholder="设备型号">
+   <button id="mappingSaveBtn" class="btn primary" onclick="saveMappingItem()">新增映射</button>
+   <button id="mappingCancelBtn" class="btn secondary hidden" onclick="cancelMappingEdit()">取消编辑</button>
+  </div>
+  <div class="table-wrap" style="max-height:430px;margin-top:12px;border:1px solid var(--line);border-radius:9px">
+   <table class="mapping-table"><thead><tr><th>类型</th><th>品牌</th><th>型号</th><th>操作</th></tr></thead><tbody id="mappingTableBody"></tbody></table>
+  </div>
+ </div>
+</section>
+
+<div class="footer">信息运维部 · 数据标准化辅助工具</div>
+</div>
+
+<script>
+const pileHeader=["*站点编号","*所属站点名称","*品牌名称","*型号","*充电桩编号","*充电桩名称","固定资产编号","通讯地址（同桩编号）","出厂编号","*是否开放（是/否）","*充电方式（vin码/刷卡/扫码）","*传输编码","*协议版本","*是否加密","密钥类型","密钥字符串","填充方式","是否base64编码","初始化向量","*通讯模块","集中器编码","*电量精度","生产日期","购置日期","质保日期","备注"];
+const gunHeader=["*充电桩编号","*枪编号","*枪名称","*枪口号","*品牌名称","*型号","二维码类型","运行状态","运营状态"];
+
+const DEFAULT_PILE_MAPPING=[{"brand":"国信","model":"GX-FPDD-750/240KW001"},{"brand":"能瑞","model":"NRKJ9300"},{"brand":"能瑞","model":"GX-FPDD/780-10kv-25"},{"brand":"能瑞","model":"LMEBEG3E9NE001901"},{"brand":"科大","model":"CSG-BCG-ZD250"},{"brand":"科大","model":"CSG-BCG-D3290"},{"brand":"科大","model":"ZTT-V1-EVD-250P-A"},{"brand":"科大","model":"CSG-BCG-A64/K02"},{"brand":"南京特来电","model":"TZD-G-250"},{"brand":"南京特来电","model":"特来电"},{"brand":"南京特来电","model":"TCZD-750/360"},{"brand":"南京特来电","model":"TCZD-360kw"},{"brand":"星星","model":"DC180ST0102-S30-A"},{"brand":"星星","model":"DC360ST0204-S30-A"},{"brand":"星星","model":"DC360ST0102-S30-A"},{"brand":"星星","model":"DC240ST0102-S30-A"},{"brand":"星星","model":"DC240ST0204-S30-A"},{"brand":"星星","model":"DC180ST0204-S30-A"},{"brand":"星星","model":"DC150ST0102-S30-A"},{"brand":"星星","model":"DC1800ST0204-S30-A"},{"brand":"星星","model":"DC2400ST0204-S30-A"},{"brand":"星星","model":"DC360ST0204"},{"brand":"星星","model":"YGC762-EV-P9P-250"},{"brand":"星星","model":"DC150ST0204-S30-A"},{"brand":"星星","model":"DH-DC1200SG36"},{"brand":"英飞源","model":"IDS30K1K-B6"},{"brand":"英飞源","model":"IES22K1K"}];
+const DEFAULT_GUN_MAPPING=[{"brand":"国信","model":"GX-FPDD-750/240KW001"},{"brand":"能瑞","model":"NRKJ9300"},{"brand":"科大","model":"CSG-BCG-ZD250"},{"brand":"科大","model":"ZTT-V1-EVD-250P"},{"brand":"科大","model":"ZTT-V1-EVA-63P"},{"brand":"南京特来电","model":"EVGBG4CDC250A8"},{"brand":"星星","model":"EV-GBG4C-DC250A-5"},{"brand":"星星","model":"YGC762-EV-P9P-250"},{"brand":"菲尼克斯","model":"EV-GBG4C-DC250A-7"},{"brand":"菲尼克斯","model":"EV-GBM4C-DC250A-5"},{"brand":"英飞源","model":"167-A1073-0080"}];
+
+let pileMappings=[],gunMappings=[],pileMappingIndex=new Map(),gunMappingIndex=new Map();
+let pileData=[],gunData=[],current="pile",issueFilter="all",sourceIssues=[],allIssues=[];
+let currentMappingType="pile",editingMappingIndex=-1;
+let detectedBrandRows=[],brandPrecisionSelections={};
+let pileOriginalOrderIndex=new Map();
+let whitespaceAuditIssues=[];
+let stats={pile:0,gun:0,matched:0,unmapped:0,errors:0,warnings:0};
+
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function safe(v){return v===undefined||v===null?"":String(v)}
+function esc(v){return safe(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+function normalizeModel(v){return safe(v).trim().toUpperCase().replace(/\\\//g,"/").replace(/／/g,"/").replace(/\s+/g,"")}
+function firstValue(obj,keys){for(const k of keys){if(Object.prototype.hasOwnProperty.call(obj,k)){const v=obj[k];if(v!==undefined&&v!==null&&safe(v).trim()!=="")return v}}return ""}
+function code(x){x=safe(x).trim();return x.startsWith("00")?x:"00"+x}
+function firstNumber(v){const m=safe(v).match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):Number.POSITIVE_INFINITY}
+function buildGunName(pileName,gunSeq){let p=safe(pileName).trim(),s=safe(gunSeq).trim();if(p){if(/号桩$/.test(p)){}else if(/号$/.test(p))p+="桩";else p+="号桩"}return p+s+"号枪"}
+function addIssue(arr,severity,type,detail){arr.push({severity,type,detail})}
+
+function loadMappings(){
+ try{
+  const saved=JSON.parse(localStorage.getItem("chargingMappingsV43")||"null");
+  pileMappings=Array.isArray(saved?.pile)?saved.pile:clone(DEFAULT_PILE_MAPPING);
+  gunMappings=Array.isArray(saved?.gun)?saved.gun:clone(DEFAULT_GUN_MAPPING);
+ }catch(e){pileMappings=clone(DEFAULT_PILE_MAPPING);gunMappings=clone(DEFAULT_GUN_MAPPING)}
+ rebuildMappingIndexes();updateMappingCounts()
+}
+function saveMappingsLocal(){
+ localStorage.setItem("chargingMappingsV43",JSON.stringify({pile:pileMappings,gun:gunMappings}));
+ rebuildMappingIndexes();updateMappingCounts();
+ if(document.getElementById("pileFile")?.files?.[0])analyzePileBrands(document.getElementById("pileFile").files[0],true)
+}
+function rebuildMappingIndexes(){
+ pileMappingIndex=new Map();gunMappingIndex=new Map();
+ pileMappings.forEach((x,i)=>{const k=normalizeModel(x.model);if(k&&!pileMappingIndex.has(k))pileMappingIndex.set(k,{...x,index:i})});
+ gunMappings.forEach((x,i)=>{const k=normalizeModel(x.model);if(k&&!gunMappingIndex.has(k))gunMappingIndex.set(k,{...x,index:i})});
+}
+function matchMapping(index,model){const k=normalizeModel(model);return k?(index.get(k)||null):null}
+
+function resolvePileBrand(p){
+ const model=firstValue(p,["桩型号","充电桩型号","型号","设备型号"]);
+ const rawBrand=safe(firstValue(p,["生产商名称","品牌","品牌名称","厂商名称","生产厂家"])).trim();
+ const mapped=matchMapping(pileMappingIndex,model);
+ return {model,rawBrand,mapped,brand:safe(mapped?.brand||rawBrand).trim()};
+}
+function buildDetectedBrands(piles,preserveSelections=true){
+ const previous=preserveSelections?{...brandPrecisionSelections}:{};
+ const map=new Map();
+ let unidentified=0;
+ piles.forEach((p,i)=>{
+  const info=resolvePileBrand(p);
+  if(!info.brand){unidentified++;return}
+  if(!map.has(info.brand))map.set(info.brand,{brand:info.brand,count:0,models:new Set()});
+  const row=map.get(info.brand);row.count++;
+  if(safe(info.model).trim())row.models.add(safe(info.model).trim());
+ });
+ detectedBrandRows=[...map.values()].map(x=>({brand:x.brand,count:x.count,models:[...x.models]}))
+   .sort((a,b)=>a.brand.localeCompare(b.brand,"zh-CN",{numeric:true}));
+ brandPrecisionSelections={};
+ detectedBrandRows.forEach(x=>{if(previous[x.brand])brandPrecisionSelections[x.brand]=previous[x.brand]});
+ renderBrandPrecisionPanel(unidentified);
+ return unidentified
+}
+function renderBrandPrecisionPanel(unidentified=0){
+ const list=document.getElementById("brandPrecisionList");
+ const summary=document.getElementById("brandPrecisionSummary");
+ const state=document.getElementById("brandPrecisionState");
+ if(!detectedBrandRows.length){
+  summary.textContent=unidentified?`未识别到有效品牌；另有 ${unidentified} 台桩无法确定品牌。`:"上传充电桩文件后，自动识别本站品牌并在此设置电量精度。";
+  state.textContent=unidentified?"识别失败":"待识别";
+  state.className="precision-state "+(unidentified?"error":"waiting");
+  list.innerHTML=unidentified?`<div class="brand-precision-error">存在无法识别品牌的充电桩。请先检查源文件品牌字段或完善桩型号映射，再进行转换。</div>`:`<div class="brand-precision-empty">请先选择或拖入充电桩 Excel 文件</div>`;
+  return
+ }
+ const selected=detectedBrandRows.filter(x=>brandPrecisionSelections[x.brand]).length;
+ summary.textContent=`检测到 ${detectedBrandRows.length} 个品牌，共 ${detectedBrandRows.reduce((s,x)=>s+x.count,0)} 台桩。请分别确认各品牌电量精度。${unidentified?`另有 ${unidentified} 台桩品牌未识别。`:""}`;
+ if(unidentified){
+  state.textContent="需处理";
+  state.className="precision-state error"
+ }else if(selected===detectedBrandRows.length){
+  state.textContent="已完成";
+  state.className="precision-state ready"
+ }else{
+  state.textContent=`待设置 ${detectedBrandRows.length-selected}`;
+  state.className="precision-state pending"
+ }
+ list.innerHTML=detectedBrandRows.map((x,i)=>{
+  const chosen=brandPrecisionSelections[x.brand]||"";
+  const modelText=x.models.length?`型号：${x.models.slice(0,3).map(esc).join("、")}${x.models.length>3?` 等 ${x.models.length} 种`:""}`:"";
+  return `<div class="brand-precision-row">
+   <div><div class="brand-name">${esc(x.brand)}</div><div class="brand-model-note">${modelText}</div></div>
+   <div class="brand-count"><strong>${x.count}</strong> 台桩</div>
+   <div class="brand-precision-options">
+    <button type="button" class="precision-choice ${chosen==="小数位后2位"?"active":""}" onclick="setBrandPrecision(${i},'小数位后2位')">小数位后2位</button>
+    <button type="button" class="precision-choice ${chosen==="小数位后3位"?"active":""}" onclick="setBrandPrecision(${i},'小数位后3位')">小数位后3位</button>
+   </div>
+  </div>`
+ }).join("")+(unidentified?`<div class="brand-precision-error">另有 ${unidentified} 台桩无法确定品牌，转换前必须先处理。</div>`:"")
+}
+function setBrandPrecision(index,value){
+ const row=detectedBrandRows[index];if(!row)return;
+ brandPrecisionSelections[row.brand]=value;
+ renderBrandPrecisionPanel(0)
+}
+async function analyzePileBrands(file,preserveSelections=false){
+ if(!file){
+  detectedBrandRows=[];brandPrecisionSelections={};renderBrandPrecisionPanel(0);return
+ }
+ const summary=document.getElementById("brandPrecisionSummary"),state=document.getElementById("brandPrecisionState");
+ summary.textContent="正在读取充电桩文件并识别品牌…";state.textContent="识别中";state.className="precision-state waiting";
+ try{
+  const piles=await readExcel(file);
+  if(!piles.length)throw new Error("第一张工作表没有可读取的数据");
+  buildDetectedBrands(piles,preserveSelections)
+ }catch(e){
+  detectedBrandRows=[];brandPrecisionSelections={};
+  summary.textContent="品牌识别失败";
+  state.textContent="读取失败";state.className="precision-state error";
+  document.getElementById("brandPrecisionList").innerHTML=`<div class="brand-precision-error">${esc(e?.message||e)}</div>`
+ }
+}
+function getMissingBrandPrecisions(){
+ return detectedBrandRows.filter(x=>!brandPrecisionSelections[x.brand]).map(x=>x.brand)
+}
+
+function updateMappingCounts(){
+ const txt=`已维护映射：桩 ${pileMappings.length} 条 / 枪 ${gunMappings.length} 条。转换时按型号自动匹配品牌，未命中保留源文件品牌。`;
+ document.getElementById("mappingNote").innerHTML=txt;
+ document.getElementById("mappingCountText").textContent=`桩 ${pileMappings.length} · 枪 ${gunMappings.length}`;
+}
+
+function loadPreferences(){
+ try{
+  const p=JSON.parse(localStorage.getItem("chargingPrefsV43")||"{}");
+  if(p.open==="否"){openNo.classList.add("active");openYes.classList.remove("active")}
+  if(Array.isArray(p.charge)){document.querySelectorAll(".charge").forEach(x=>x.classList.toggle("active",p.charge.includes(x.innerText)))}
+ }catch(e){}
+}
+function savePreferences(){
+ const p={open:openYes.classList.contains("active")?"是":"否",charge:[...document.querySelectorAll(".charge.active")].map(x=>x.innerText)};
+ localStorage.setItem("chargingPrefsV43",JSON.stringify(p))
+}
+
+document.querySelectorAll(".charge").forEach(x=>x.onclick=()=>{x.classList.toggle("active");savePreferences()});
+openYes.onclick=()=>{openYes.classList.add("active");openNo.classList.remove("active");savePreferences()};
+openNo.onclick=()=>{openNo.classList.add("active");openYes.classList.remove("active");savePreferences()};
+
+function readExcel(file){
+ return new Promise((resolve,reject)=>{
+  if(!file)return reject(new Error("请选择 Excel 文件"));
+  if(typeof XLSX==="undefined")return reject(new Error("Excel 解析组件未加载，请检查当前网络环境后重新打开页面"));
+  const r=new FileReader();
+  r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:"array"});const ws=wb.Sheets[wb.SheetNames[0]];resolve(XLSX.utils.sheet_to_json(ws,{defval:"",raw:false}))}catch(err){reject(err)}};
+  r.onerror=()=>reject(new Error("文件读取失败"));r.readAsArrayBuffer(file)
+ })
+}
+function hasHeader(rows,keys){if(!rows.length)return false;const hs=Object.keys(rows[0]);return keys.some(k=>hs.includes(k))}
+function preValidateRows(piles,guns){
+ const issues=[];
+ if(!piles.length)addIssue(issues,"error","桩文件","第一张工作表没有可读取的数据");
+ if(!guns.length)addIssue(issues,"error","枪文件","第一张工作表没有可读取的数据");
+ const pileReq=[
+  ["桩编码",["充电桩编码","桩编码","充电桩编号"]],
+  ["桩型号",["桩型号","充电桩型号","型号","设备型号"]],
+  ["桩名称",["桩名称","充电桩名称","设备名称"]]
+ ];
+ const gunReq=[
+  ["所属桩编码",["充电桩编码","桩编码","充电桩编号"]],
+  ["枪口号",["枪序号","枪口号","充电枪序号","序号"]],
+  ["枪型号",["枪型号","充电枪型号","枪头型号","型号","设备型号"]]
+ ];
+ pileReq.forEach(([n,k])=>{if(piles.length&&!hasHeader(piles,k))addIssue(issues,"error","桩文件表头",`未识别到“${n}”字段；支持字段：${k.join(" / ")}`)});
+ gunReq.forEach(([n,k])=>{if(guns.length&&!hasHeader(guns,k))addIssue(issues,"error","枪文件表头",`未识别到“${n}”字段；支持字段：${k.join(" / ")}`)});
+ return issues
+}
+function validateOutput(){
+ const issues=[];
+ const reqPile=[[0,"站点编号"],[1,"所属站点名称"],[2,"品牌名称"],[3,"型号"],[4,"充电桩编号"],[5,"充电桩名称"],[9,"是否开放"],[10,"充电方式"],[11,"传输编码"],[12,"协议版本"],[13,"是否加密"],[19,"通讯模块"],[21,"电量精度"]];
+ const reqGun=[[0,"充电桩编号"],[1,"枪编号"],[2,"枪名称"],[3,"枪口号"],[4,"品牌名称"],[5,"型号"]];
+ pileData.forEach((r,i)=>reqPile.forEach(([c,n])=>{if(safe(r[c]).trim()==="")addIssue(issues,"error","桩结果",`第 ${i+1} 行必填字段“${n}”为空`)}));
+ gunData.forEach((r,i)=>reqGun.forEach(([c,n])=>{if(safe(r[c]).trim()==="")addIssue(issues,"error","枪结果",`第 ${i+1} 行必填字段“${n}”为空`)}));
+ const pseen=new Map();pileData.forEach((r,i)=>{const k=safe(r[4]).trim();if(!k)return;if(pseen.has(k))addIssue(issues,"error","重复桩编号",`第 ${pseen.get(k)+1} 行与第 ${i+1} 行充电桩编号重复：${k}`);else pseen.set(k,i)});
+ const gseen=new Map();gunData.forEach((r,i)=>{const k=safe(r[1]).trim();if(!k)return;if(gseen.has(k))addIssue(issues,"error","重复枪编号",`第 ${gseen.get(k)+1} 行与第 ${i+1} 行枪编号重复：${k}`);else gseen.set(k,i)});
+ const gunCount=new Map();gunData.forEach(r=>gunCount.set(safe(r[0]),(gunCount.get(safe(r[0]))||0)+1));
+ pileData.forEach((r,i)=>{if(!gunCount.get(safe(r[4])))addIssue(issues,"warn","桩枪关系",`充电桩第 ${i+1} 行（${r[5]||r[4]}）没有匹配到任何充电枪`)});
+ return issues
+}
+function refreshIssues(){
+ allIssues=[...sourceIssues,...validateOutput()];
+ stats.pile=pileData.length;stats.gun=gunData.length;
+ stats.errors=allIssues.filter(x=>x.severity==="error").length;
+ stats.warnings=allIssues.filter(x=>x.severity==="warn").length;
+ document.getElementById("metricPile").textContent=stats.pile;
+ document.getElementById("metricGun").textContent=stats.gun;
+ document.getElementById("metricMatched").textContent=stats.matched;
+ document.getElementById("metricUnmapped").textContent=stats.unmapped;
+ document.getElementById("metricErrors").textContent=stats.errors;
+ document.getElementById("metricWarnings").textContent=stats.warnings;
+ const validationSummaryEl=document.getElementById("validationSummary");
+ validationSummaryEl.textContent=stats.errors?`存在 ${stats.errors} 项错误，请核对后再导出`:(stats.warnings?`无错误，存在 ${stats.warnings} 项警告`:"校验通过，可导出");
+ validationSummaryEl.classList.toggle("validation-summary-success",!stats.errors&&!stats.warnings);
+ renderIssues()
+}
+function renderIssues(){
+ const box=document.getElementById("issueList");
+ const list=issueFilter==="all"?allIssues:allIssues.filter(x=>x.severity===issueFilter);
+ if(!list.length){
+  if(allIssues.length){
+    box.innerHTML=`<div class="validation-empty">当前筛选条件下没有异常</div>`;
+  }else{
+    box.innerHTML=`<div class="validation-empty success">✓ 未发现异常，数据校验通过</div>`;
+  }
+  return
+}
+ box.innerHTML=list.map(x=>`<div class="issue-row"><div><span class="issue-badge ${x.severity}">${x.severity==="error"?"错误":x.severity==="warn"?"警告":"提示"}</span></div><div class="issue-type">${esc(x.type)}</div><div class="issue-detail">${esc(x.detail)}</div></div>`).join("")
+}
+function setIssueFilter(f,btn){issueFilter=f;document.querySelectorAll(".filter-btn").forEach(x=>x.classList.remove("active"));btn.classList.add("active");renderIssues()}
+
+function sortPileRows(rows){
+ rows.sort((a,b)=>{
+  const ai=pileOriginalOrderIndex.has(safe(a[4]).trim())?pileOriginalOrderIndex.get(safe(a[4]).trim()):Number.MAX_SAFE_INTEGER;
+  const bi=pileOriginalOrderIndex.has(safe(b[4]).trim())?pileOriginalOrderIndex.get(safe(b[4]).trim()):Number.MAX_SAFE_INTEGER;
+  return ai-bi
+ })
+}
+function sortGunRows(rows){
+ rows.sort((a,b)=>{
+  const aPile=safe(a[0]).trim(),bPile=safe(b[0]).trim();
+  const ai=pileOriginalOrderIndex.has(aPile)?pileOriginalOrderIndex.get(aPile):Number.MAX_SAFE_INTEGER;
+  const bi=pileOriginalOrderIndex.has(bPile)?pileOriginalOrderIndex.get(bPile):Number.MAX_SAFE_INTEGER;
+  if(ai!==bi)return ai-bi;
+  const ag=firstNumber(a[3]),bg=firstNumber(b[3]);
+  if(ag!==bg)return ag-bg;
+  return safe(a[3]).localeCompare(safe(b[3]),"zh-CN",{numeric:true})
+ })
+}
+
+async function convert(){
+ const status=document.getElementById("convertStatus");sourceIssues=[];pileData=[];gunData=[];stats.matched=0;stats.unmapped=0;
+ try{
+  status.textContent="正在读取并校验数据…";
+  if(!stationCode.value.trim())addIssue(sourceIssues,"error","基础配置","站点编号不能为空");
+  if(!stationName.value.trim())addIssue(sourceIssues,"error","基础配置","所属站点名称不能为空");
+  if(!pileFile.files[0])addIssue(sourceIssues,"error","文件导入","未选择充电桩文件");
+  if(!gunFile.files[0])addIssue(sourceIssues,"error","文件导入","未选择充电枪文件");
+  if(sourceIssues.length){refreshIssues();status.textContent="基础配置或文件不完整，请查看数据校验。";return}
+
+  const [piles,guns]=await Promise.all([readExcel(pileFile.files[0]),readExcel(gunFile.files[0])]);
+  sourceIssues.push(...preValidateRows(piles,guns));
+  if(sourceIssues.some(x=>x.severity==="error")){refreshIssues();status.textContent="源文件表头或数据结构校验未通过。";return}
+
+  const pileByCode={};const rawPileSeen=new Map();
+  pileOriginalOrderIndex=new Map();
+  piles.forEach((p,i)=>{
+   const raw=safe(firstValue(p,["充电桩编码","桩编码","充电桩编号"])).trim();
+   if(!raw){addIssue(sourceIssues,"error","桩源数据",`第 ${i+2} 行充电桩编码为空`);return}
+   if(rawPileSeen.has(raw))addIssue(sourceIssues,"error","桩源数据",`Excel 第 ${rawPileSeen.get(raw)+2} 行与第 ${i+2} 行充电桩编码重复：${raw}`);
+   else rawPileSeen.set(raw,i);
+   pileByCode[raw]=p;
+   pileOriginalOrderIndex.set(code(raw),i)
+  });
+
+  const unidentifiedBrands=buildDetectedBrands(piles,true);
+  const missingPrecisions=getMissingBrandPrecisions();
+  if(unidentifiedBrands>0){
+   addIssue(sourceIssues,"error","品牌精度配置",`有 ${unidentifiedBrands} 台充电桩无法识别品牌，请先检查源文件品牌字段或完善桩型号映射`);
+  }
+  if(missingPrecisions.length){
+   addIssue(sourceIssues,"error","品牌精度配置",`以下品牌尚未选择电量精度：${missingPrecisions.join("、")}`);
+  }
+  if(sourceIssues.some(x=>x.severity==="error")){
+   refreshIssues();status.textContent="品牌电量精度尚未配置完成，请完成后重新转换。";return
+  }
+
+  const charge=[...document.querySelectorAll(".charge.active")].map(x=>x.innerText).join(",");
+  const open=openYes.classList.contains("active")?"是":"否";
+  const unmappedPile=new Set(),unmappedGun=new Set();
+
+  pileData=piles.map((p,i)=>{
+   const info=resolvePileBrand(p);
+   const model=info.model,rawBrand=info.rawBrand,mapped=info.mapped,pileBrand=info.brand;
+   if(mapped)stats.matched++;else if(safe(model).trim()){unmappedPile.add(safe(model).trim());addIssue(sourceIssues,"warn","未识别桩型号",`桩 Excel 第 ${i+2} 行型号“${model}”未命中映射${rawBrand?`，已保留源品牌“${rawBrand}”`:"，且源品牌为空"}`)}
+   const rawCode=firstValue(p,["充电桩编码","桩编码","充电桩编号"]);
+   const name=firstValue(p,["桩名称","充电桩名称","设备名称"]);
+   const precision=brandPrecisionSelections[pileBrand]||"";
+   return [stationCode.value.trim(),stationName.value.trim(),pileBrand,model,code(rawCode),name,"","","",open,charge,"二进制","v.0.0.12","是","AES-128-CBC加密","65ghf288sh28j234","PKCS#7","加密前数据编码","7645392627221362","内置通讯模块","",precision,"","","",""]
+  });
+  // 充电桩严格遵循【桩】Excel原始行顺序
+  sortPileRows(pileData);
+
+  guns.forEach((g,i)=>{
+   const rawPile=firstValue(g,["充电桩编码","桩编码","充电桩编号"]),key=safe(rawPile).trim();
+   const p=pileByCode[key];
+   if(!p){addIssue(sourceIssues,"error","桩枪关系",`枪 Excel 第 ${i+2} 行所属桩编码“${key||"(空)"}”在桩文件中不存在，该枪未输出`);return}
+   const seq=firstValue(g,["枪序号","枪口号","充电枪序号","序号"]);
+   const model=firstValue(g,["枪型号","充电枪型号","枪头型号","型号","设备型号"]);
+   const rawBrand=firstValue(g,["品牌","枪品牌","枪品牌名称","生产商名称","品牌名称","厂商名称"]);
+   const mapped=matchMapping(gunMappingIndex,model);
+   if(mapped)stats.matched++;else if(safe(model).trim()){unmappedGun.add(safe(model).trim());addIssue(sourceIssues,"warn","未识别枪型号",`枪 Excel 第 ${i+2} 行型号“${model}”未命中映射${rawBrand?`，已保留源品牌“${rawBrand}”`:"，且源品牌为空"}`)}
+   const c=code(rawPile),s=safe(seq).trim(),s2=s.padStart(2,"0");
+   const pileName=firstValue(p,["桩名称","充电桩名称","设备名称"]);
+   gunData.push([c,c+s2,buildGunName(pileName,s),s,mapped?.brand||rawBrand,model,"QR码","待机","运行"])
+  });
+  sortGunRows(gunData);
+  stats.unmapped=unmappedPile.size+unmappedGun.size;
+  refreshIssues();showTable("pile");savePreferences();
+  status.textContent=`转换完成：桩 ${pileData.length} 条，枪 ${gunData.length} 条；映射命中 ${stats.matched} 条，未识别型号 ${stats.unmapped} 个。`;
+ }catch(err){
+  console.error(err);addIssue(sourceIssues,"error","程序运行",err?.message||String(err));refreshIssues();
+  status.textContent="转换失败："+(err?.message||err)
+ }
+}
+
+function showTable(t){
+ current=t;pileTab.classList.toggle("active",t==="pile");gunTab.classList.toggle("active",t==="gun");
+ pileCount.textContent=`桩 ${pileData.length} 条`;gunCount.textContent=`枪 ${gunData.length} 条`;
+ const d=t==="pile"?pileData:gunData,head=t==="pile"?pileHeader:gunHeader,q=resultSearch.value.trim().toLowerCase();
+ if(!d.length){result.innerHTML=`<div class="empty-state"><div><div class="empty-title">暂无${t==="pile"?"充电桩":"充电枪"}数据</div><div class="empty-desc">完成转换后将在这里显示</div></div></div>`;return}
+ const visible=d.map((r,i)=>({r,i})).filter(x=>!q||x.r.join(" ").toLowerCase().includes(q));
+ let h="<table><thead><tr>"+head.map(x=>`<th>${esc(x)}</th>`).join("")+"</tr></thead><tbody>";
+ visible.forEach(x=>{h+="<tr>"+x.r.map((v,c)=>`<td class="editable" contenteditable="true" spellcheck="false" data-type="${t}" data-row="${x.i}" data-col="${c}" onblur="editCell(this)">${esc(v)}</td>`).join("")+"</tr>"});
+ h+="</tbody></table>";result.innerHTML=h
+}
+function editCell(el){
+ const d=el.dataset.type==="pile"?pileData:gunData,r=Number(el.dataset.row),c=Number(el.dataset.col);d[r][c]=el.innerText.trim();
+ refreshIssues();convertStatus.textContent="结果已手动修改；复制和导出将使用当前表格数据。"
+}
+function resortData(){sortPileRows(pileData);sortGunRows(gunData);showTable(current);refreshIssues()}
+async function copyData(withHeader){
+ const d=current==="pile"?pileData:gunData,h=current==="pile"?pileHeader:gunHeader;
+ if(!d.length)return alert("当前没有可复制的数据");
+ const rows=withHeader?[h,...d]:d,text=rows.map(r=>r.join("\t")).join("\n");
+ try{await navigator.clipboard.writeText(text)}catch(e){const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove()}
+ alert(withHeader?"已复制（含表头）":"已复制（不含表头）")
+}
+function exportExcel(){
+ if(!pileData.length&&!gunData.length)return alert("请先完成转换");
+ if(stats.errors&&!confirm(`当前仍有 ${stats.errors} 项错误，是否仍然导出？`))return;
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([pileHeader,...pileData]),"充电桩");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([gunHeader,...gunData]),"充电枪");
+ const n=(stationName.value.trim()||"桩枪").replace(/[\\/:*?"<>|]/g,"_");
+ const d=new Date(),ds=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+ XLSX.writeFile(wb,`${n}_充电设备导入数据_${ds}.xlsx`)
+}
+function exportIssues(){
+ if(!allIssues.length)return alert("当前没有异常可导出");
+ const rows=[["级别","类型","说明"],...allIssues.map(x=>[x.severity==="error"?"错误":x.severity==="warn"?"警告":"提示",x.type,x.detail])];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),"异常清单");XLSX.writeFile(wb,"桩枪数据异常清单.xlsx")
+}
+
+function trailingWhitespaceInfo(value){
+ const text=safe(value);
+ const match=text.match(/[\s\u00a0\u3000]+$/u);
+ if(!match)return null;
+ const clean=text.slice(0,-match[0].length);
+ if(!/^[\s\u00a0\u3000]*\d+$/.test(clean))return null;
+ const names={" ":"半角空格","\u00a0":"不换行空格","\u3000":"全角空格","\t":"制表符","\r":"回车","\n":"换行"};
+ const counts=new Map();
+ [...match[0]].forEach(ch=>{const name=names[ch]||`空白字符 U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4,"0")}`;counts.set(name,(counts.get(name)||0)+1)});
+ return {clean,marker:[...counts].map(([name,count])=>`${name}×${count}`).join("、")}
+}
+async function auditWorkbook(){
+ const file=document.getElementById("auditFile").files?.[0];
+ const summary=document.getElementById("auditSummary"),box=document.getElementById("auditResult");
+ if(!file){alert("请先选择需要核查的 Excel 文件");return}
+ if(typeof XLSX==="undefined"){alert("Excel 解析组件未加载，请检查当前网络环境后重新打开页面");return}
+ summary.textContent="正在核查全部工作表…";summary.classList.remove("validation-summary-success");
+ box.innerHTML='<div class="validation-empty">正在读取并扫描单元格…</div>';
+ try{
+  const wb=XLSX.read(await file.arrayBuffer(),{type:"array",cellDates:false});
+  const issues=[];let checkedCells=0;
+  wb.SheetNames.forEach(sheetName=>{
+   const ws=wb.Sheets[sheetName];if(!ws||!ws["!ref"])return;
+   const range=XLSX.utils.decode_range(ws["!ref"]);
+   for(let r=range.s.r;r<=range.e.r;r++)for(let c=range.s.c;c<=range.e.c;c++){
+    const address=XLSX.utils.encode_cell({r,c}),cell=ws[address];if(!cell||cell.v===undefined||cell.v===null)continue;
+    checkedCells++;
+    if(typeof cell.v!=="string")continue;
+    const info=trailingWhitespaceInfo(cell.v);if(!info)continue;
+    const headerCell=ws[XLSX.utils.encode_cell({r:range.s.r,c})];
+    issues.push({sheet:sheetName,address,row:r+1,column:XLSX.utils.encode_col(c),header:safe(headerCell?.v).trim(),value:cell.v,corrected:info.clean,marker:info.marker})
+   }
+  });
+  whitespaceAuditIssues=issues;
+  renderAuditResults();
+  if(issues.length){summary.textContent=`发现 ${issues.length} 个尾部空格问题（已核查 ${checkedCells} 个有值单元格）`}
+  else{summary.textContent=`核查通过：${checkedCells} 个有值单元格未发现问题`;summary.classList.add("validation-summary-success")}
+ }catch(err){
+  console.error(err);whitespaceAuditIssues=[];summary.textContent="核查失败";
+  box.innerHTML=`<div class="validation-empty">文件核查失败：${esc(err?.message||err)}</div>`
+ }
+}
+function renderAuditResults(){
+ const box=document.getElementById("auditResult");
+ if(!whitespaceAuditIssues.length){box.innerHTML='<div class="audit-success">✓ 未发现数字末尾带空格的问题</div>';return}
+ let html="<table><thead><tr><th>工作表</th><th>单元格</th><th>字段名</th><th>当前内容</th><th>正确内容</th></tr></thead><tbody>";
+ whitespaceAuditIssues.forEach(x=>{
+  html+=`<tr><td>${esc(x.sheet)}</td><td><code>${esc(x.address)}</code><div class="inline-note">第 ${x.row} 行 / ${x.column} 列</div></td><td>${esc(x.header||"—")}</td><td><code>${esc(x.corrected)}</code><span class="space-marker">末尾：${esc(x.marker)}</span></td><td><code>${esc(x.corrected)}</code></td></tr>`
+ });
+ box.innerHTML=html+"</tbody></table>"
+}
+function exportAuditIssues(){
+ if(!whitespaceAuditIssues.length)return alert("当前没有可导出的尾部空格问题");
+ const rows=[["工作表","单元格","行号","列号","字段名","当前内容（含不可见空白）","尾部字符","正确内容"],...whitespaceAuditIssues.map(x=>[x.sheet,x.address,x.row,x.column,x.header,x.value,x.marker,x.corrected])];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),"尾部空格问题");
+ XLSX.writeFile(wb,"Excel尾部空格核查结果.xlsx")
+}
+function resetAudit(){
+ const input=document.getElementById("auditFile");input.value="";whitespaceAuditIssues=[];
+ document.getElementById("auditFileName").textContent="尚未选择文件";
+ const summary=document.getElementById("auditSummary");summary.textContent="尚未核查文件";summary.classList.remove("validation-summary-success");
+ document.getElementById("auditResult").innerHTML='<div class="validation-empty">上传一个 Excel 文件后点击“开始核查”</div>'
+}
+
+function refreshFileName(inputId,textId){const i=document.getElementById(inputId);document.getElementById(textId).textContent=i.files?.[0]?.name||"尚未选择文件"}
+pileFile.addEventListener("change",()=>{
+ refreshFileName("pileFile","pileFileName");
+ brandPrecisionSelections={};analyzePileBrands(pileFile.files?.[0],false)
+});
+gunFile.addEventListener("change",()=>refreshFileName("gunFile","gunFileName"));
+auditFile.addEventListener("change",()=>{refreshFileName("auditFile","auditFileName");whitespaceAuditIssues=[];auditSummary.textContent="文件已选择，等待核查";auditSummary.classList.remove("validation-summary-success");auditResult.innerHTML='<div class="validation-empty">点击“开始核查”扫描全部工作表</div>'});
+function bindDrop(cardId,inputId,textId){
+ const card=document.getElementById(cardId),input=document.getElementById(inputId);
+ ["dragenter","dragover"].forEach(ev=>card.addEventListener(ev,e=>{e.preventDefault();card.classList.add("drag")}));
+ ["dragleave","drop"].forEach(ev=>card.addEventListener(ev,e=>{e.preventDefault();card.classList.remove("drag")}));
+ card.addEventListener("drop",e=>{
+  const f=[...e.dataTransfer.files].find(x=>/\.(xlsx|xls)$/i.test(x.name));if(!f)return alert("请拖入 Excel 文件");
+  const dt=new DataTransfer();dt.items.add(f);input.files=dt.files;refreshFileName(inputId,textId);
+  if(inputId==="pileFile"){brandPrecisionSelections={};analyzePileBrands(f,false)}
+  if(inputId==="auditFile"){whitespaceAuditIssues=[];auditSummary.textContent="文件已选择，等待核查";auditSummary.classList.remove("validation-summary-success");auditResult.innerHTML='<div class="validation-empty">点击“开始核查”扫描全部工作表</div>'}
+ })
+}
+bindDrop("pileDrop","pileFile","pileFileName");bindDrop("gunDrop","gunFile","gunFileName");bindDrop("auditDrop","auditFile","auditFileName");
+
+function toggleMappingPanel(){const b=mappingPanelBody;b.classList.toggle("open");mappingToggleBtn.textContent=b.classList.contains("open")?"收起维护":"展开维护";if(b.classList.contains("open"))renderMappingTable()}
+function setMappingType(t){currentMappingType=t;mapPileTab.classList.toggle("active",t==="pile");mapGunTab.classList.toggle("active",t==="gun");cancelMappingEdit();renderMappingTable()}
+function renderMappingTable(){
+ const arr=currentMappingType==="pile"?pileMappings:gunMappings,q=mappingSearch.value.trim().toLowerCase();
+ const rows=arr.map((x,i)=>({...x,i})).filter(x=>!q||`${x.brand} ${x.model}`.toLowerCase().includes(q));
+ mappingTableBody.innerHTML=rows.map(x=>`<tr><td><span class="mapping-type-badge">${currentMappingType==="pile"?"桩":"枪"}</span></td><td>${esc(x.brand)}</td><td>${esc(x.model)}</td><td><button class="btn secondary mini" onclick="editMappingItem(${x.i})">编辑</button> <button class="btn danger mini" onclick="deleteMappingItem(${x.i})">删除</button></td></tr>`).join("")||`<tr><td colspan="4" style="text-align:center;color:var(--muted)">暂无匹配项</td></tr>`
+}
+function saveMappingItem(){
+ const brand=mappingBrand.value.trim(),model=mappingModel.value.trim();if(!brand||!model)return alert("请填写品牌名称和设备型号");
+ const arr=currentMappingType==="pile"?pileMappings:gunMappings,key=normalizeModel(model);
+ const duplicate=arr.findIndex((x,i)=>normalizeModel(x.model)===key&&i!==editingMappingIndex);
+ if(duplicate>=0&&!confirm(`该型号已存在映射“${arr[duplicate].brand}”，是否覆盖？`))return;
+ if(duplicate>=0){arr[duplicate]={brand,model};if(editingMappingIndex>=0&&editingMappingIndex!==duplicate)arr.splice(editingMappingIndex,1)}
+ else if(editingMappingIndex>=0)arr[editingMappingIndex]={brand,model};else arr.push({brand,model});
+ saveMappingsLocal();cancelMappingEdit();renderMappingTable()
+}
+function editMappingItem(i){const arr=currentMappingType==="pile"?pileMappings:gunMappings,x=arr[i];editingMappingIndex=i;mappingBrand.value=x.brand;mappingModel.value=x.model;mappingSaveBtn.textContent="保存修改";mappingCancelBtn.classList.remove("hidden")}
+function cancelMappingEdit(){editingMappingIndex=-1;mappingBrand.value="";mappingModel.value="";mappingSaveBtn.textContent="新增映射";mappingCancelBtn.classList.add("hidden")}
+function deleteMappingItem(i){const arr=currentMappingType==="pile"?pileMappings:gunMappings,x=arr[i];if(!confirm(`确认删除映射：${x.brand} / ${x.model}？`))return;arr.splice(i,1);saveMappingsLocal();cancelMappingEdit();renderMappingTable()}
+function restoreDefaultMappings(){if(!confirm("确认恢复默认桩枪映射？自行新增或修改的映射将被覆盖。"))return;pileMappings=clone(DEFAULT_PILE_MAPPING);gunMappings=clone(DEFAULT_GUN_MAPPING);saveMappingsLocal();cancelMappingEdit();renderMappingTable()}
+function exportMappings(){
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pileMappings.map(x=>({"品牌":x.brand,"型号":x.model}))),"桩映射");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(gunMappings.map(x=>({"品牌":x.brand,"型号":x.model}))),"枪映射");
+ XLSX.writeFile(wb,"桩枪映射_导出.xlsx")
+}
+async function importMappings(file){
+ if(!file)return;
+ try{
+  const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array"});let added=0,updated=0;
+  wb.SheetNames.forEach((sn,si)=>{
+   const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:"",raw:false});
+   let type=sn.includes("枪")?"gun":sn.includes("桩")?"pile":currentMappingType;
+   const arr=type==="pile"?pileMappings:gunMappings;
+   rows.forEach(r=>{
+    const brand=firstValue(r,["品牌","品牌名称","brand","Brand"]),model=firstValue(r,["型号","设备型号","model","Model"]);
+    if(!safe(brand).trim()||!safe(model).trim())return;
+    const idx=arr.findIndex(x=>normalizeModel(x.model)===normalizeModel(model));
+    if(idx>=0){arr[idx]={brand:safe(brand).trim(),model:safe(model).trim()};updated++}else{arr.push({brand:safe(brand).trim(),model:safe(model).trim()});added++}
+   })
+  });
+  saveMappingsLocal();renderMappingTable();alert(`映射导入完成：新增 ${added} 条，更新 ${updated} 条`)
+ }catch(e){alert("映射导入失败："+(e?.message||e))}
+}
+
+function resetTool(){
+ if((pileData.length||gunData.length)&&!confirm("确认清空当前配置、文件和转换结果？映射维护数据不会删除。"))return;
+ stationCode.value="";stationName.value="";pileFile.value="";gunFile.value="";refreshFileName("pileFile","pileFileName");refreshFileName("gunFile","gunFileName");
+ openYes.classList.add("active");openNo.classList.remove("active");document.querySelectorAll(".charge").forEach((x,i)=>x.classList.toggle("active",i===0));savePreferences();
+ detectedBrandRows=[];brandPrecisionSelections={};renderBrandPrecisionPanel(0);
+ resetAudit();
+ pileOriginalOrderIndex=new Map();
+ pileData=[];gunData=[];sourceIssues=[];allIssues=[];current="pile";stats={pile:0,gun:0,matched:0,unmapped:0,errors:0,warnings:0};
+ metricPile.textContent=metricGun.textContent=metricMatched.textContent=metricUnmapped.textContent=metricErrors.textContent=metricWarnings.textContent="0";
+ validationSummary.textContent="尚未执行转换";validationSummary.classList.remove("validation-summary-success");issueList.innerHTML='<div class="validation-empty">转换后自动生成校验结果</div>';convertStatus.textContent="";resultSearch.value="";showTable("pile")
+}
+
+loadMappings();loadPreferences();renderBrandPrecisionPanel(0);showTable("pile");
+</script>
+</body>
+</html>

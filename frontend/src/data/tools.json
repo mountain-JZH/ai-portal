@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "icon": "KB",
+    "title": "操作知识库",
+    "description": "快速查询内部平台操作方法、常见问题及业务处理流程",
+    "status": "available",
+    "actionType": "route",
+    "actionTarget": "/knowledge",
+    "buttonText": "立即使用"
+  },
+  {
+    "id": 2,
+    "icon": "QS",
+    "title": "QsTArT 站点信息快速导入工具",
+    "description": "充电桩、充电枪基础数据快速转换、校验与导出",
+    "status": "available",
+    "actionType": "static",
+    "actionTarget": "/tools/qstart/index.html",
+    "buttonText": "打开工具"
+  },
+  {
+    "id": 3,
+    "icon": "PPT",
+    "title": "AI PPT",
+    "description": "基于企业模板自动生成标准化汇报材料",
+    "status": "developing",
+    "actionType": "none",
+    "actionTarget": "",
+    "buttonText": "开发中"
+  },
+  {
+    "id": 4,
+    "icon": "+",
+    "title": "更多工具",
+    "description": "持续接入更多内部智能化与业务辅助应用",
+    "status": "developing",
+    "actionType": "none",
+    "actionTarget": "",
+    "buttonText": "持续接入"
+  }
+]
