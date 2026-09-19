@@ -2,12 +2,21 @@
 import { reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
+function getLocalDate() {
+  const now = new Date()
+  const localDate = new Date(
+    now.getTime() - now.getTimezoneOffset() * 60_000,
+  )
+
+  return localDate.toISOString().slice(0, 10)
+}
+
 const form = reactive({
   title: '',
   summary: '',
   source_type: '内部动态',
   source: '',
-  publish_date: '',
+  publish_date: getLocalDate(),
   keywords: '',
   url: '',
   content: '',

@@ -1,19 +1,47 @@
 <script setup>
 import {
   computed,
+  onMounted,
   ref,
 } from 'vue'
 import { RouterLink } from 'vue-router'
 
-import newsList from '../data/news.json'
-
+const newsList = ref([])
 const failedImageIds = ref([])
+const loading = ref(true)
+const errorMessage = ref('')
 
 const sortedNews = computed(() =>
-  [...newsList].sort((first, second) =>
+  [...newsList.value].sort((first, second) =>
     String(second.date).localeCompare(String(first.date)),
   ),
 )
+
+async function loadNews() {
+  loading.value = true
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/news')
+
+    if (!response.ok) {
+      throw new Error(`请求失败：${response.status}`)
+    }
+
+    const data = await response.json()
+
+    newsList.value = data.map((news) => ({
+      ...news,
+      type: news.source_type,
+      date: news.publish_date,
+    }))
+  } catch (error) {
+    console.error('新闻加载失败：', error)
+    errorMessage.value = '新闻加载失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
 
 function getTypeClass(type) {
   return {
@@ -37,6 +65,10 @@ function handleImageError(newsId) {
     failedImageIds.value = [...failedImageIds.value, newsId]
   }
 }
+
+onMounted(() => {
+  loadNews()
+})
 </script>
 
 <template>
@@ -47,8 +79,24 @@ function handleImageError(newsId) {
       <p>内部通知、信息宣贯及行业动态统一展示。</p>
     </div>
 
+    <section
+      v-if="loading"
+      class="empty-state"
+      role="status"
+    >
+      正在加载新闻...
+    </section>
+
+    <section
+      v-else-if="errorMessage"
+      class="empty-state error-state"
+      role="alert"
+    >
+      {{ errorMessage }}
+    </section>
+
     <div
-      v-if="sortedNews.length"
+      v-else-if="sortedNews.length"
       class="news-grid"
     >
       <article
@@ -103,7 +151,7 @@ function handleImageError(newsId) {
       v-else
       class="empty-state"
     >
-      暂无新闻动态
+      暂无新闻
     </section>
   </main>
 </template>
@@ -371,6 +419,10 @@ function handleImageError(newsId) {
   background: var(--color-surface-soft);
   color: var(--color-muted);
   text-align: center;
+}
+
+.error-state {
+  color: #b45353;
 }
 
 @media (max-width: 1099px) {

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
 from database import get_db_connection
@@ -72,6 +72,46 @@ def get_news():
         news_list.append(dict(row))
 
     return news_list
+
+
+@router.get("/{news_id}", response_model=NewsResponse)
+def get_news_by_id(news_id: int):
+    """
+    根据新闻 id 获取单条新闻。
+    """
+
+    connection = get_db_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT
+                id,
+                title,
+                summary,
+                content,
+                source,
+                source_type,
+                publish_date,
+                keywords,
+                url,
+                is_published,
+                created_at
+            FROM news
+            WHERE id = ?
+            """,
+            (news_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="News not found",
+        )
+
+    return dict(row)
 
 
 @router.post(

@@ -1,28 +1,71 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
-import newsList from '../data/news.json'
-
 const route = useRoute()
+const news = ref(null)
+const loading = ref(true)
+const notFound = ref(false)
+const errorMessage = ref('')
 
-const news = computed(() => {
-  return newsList.find(
-    (item) => String(item.id) === String(route.params.id),
-  )
-})
+async function loadNews(newsId) {
+  loading.value = true
+  news.value = null
+  notFound.value = false
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/api/news/${encodeURIComponent(newsId)}`,
+    )
+
+    if (response.status === 404) {
+      notFound.value = true
+      return
+    }
+
+    if (!response.ok) {
+      throw new Error(`请求失败：${response.status}`)
+    }
+
+    const data = await response.json()
+
+    news.value = {
+      ...data,
+      type: data.source_type,
+      date: data.publish_date,
+      keywords: String(data.keywords || '')
+        .split(',')
+        .map((keyword) => keyword.trim())
+        .filter(Boolean),
+      content: String(data.content || '')
+        .split(/\r?\n/)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean),
+    }
+  } catch (error) {
+    console.error('新闻加载失败：', error)
+    errorMessage.value = '新闻加载失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(
+  () => route.params.id,
+  (newsId) => loadNews(newsId),
+  { immediate: true },
+)
 
 const sourceUrl = computed(() => {
   if (
-    news.value?.sourceType !== 'external' ||
-    !news.value.source ||
-    !news.value.sourceUrl
+    !news.value?.url
   ) {
     return ''
   }
 
   try {
-    const url = new URL(news.value.sourceUrl)
+    const url = new URL(news.value.url)
 
     return ['http:', 'https:'].includes(url.protocol)
       ? url.href
@@ -35,8 +78,16 @@ const sourceUrl = computed(() => {
 
 <template>
   <main class="detail-page">
+    <section
+      v-if="loading"
+      class="not-found"
+      role="status"
+    >
+      <p>正在加载新闻...</p>
+    </section>
+
     <div
-      v-if="news"
+      v-else-if="news"
       class="article"
     >
       <RouterLink
@@ -84,10 +135,10 @@ const sourceUrl = computed(() => {
       </section>
 
       <footer
-        v-if="news.sourceType === 'external' && news.source"
+        v-if="news.source || sourceUrl"
         class="source-info"
       >
-        <span>来源：{{ news.source }}</span>
+        <span v-if="news.source">来源：{{ news.source }}</span>
 
         <a
           v-if="sourceUrl"
@@ -101,11 +152,21 @@ const sourceUrl = computed(() => {
     </div>
 
     <section
-      v-else
+      v-else-if="notFound"
       class="not-found"
     >
-      <h1>未找到该新闻</h1>
+      <h1>新闻不存在</h1>
       <p>该新闻可能已被移除，或访问地址有误。</p>
+      <RouterLink to="/news">返回新闻动态</RouterLink>
+    </section>
+
+    <section
+      v-else
+      class="not-found"
+      role="alert"
+    >
+      <h1>新闻加载失败</h1>
+      <p>{{ errorMessage || '新闻加载失败，请稍后重试' }}</p>
       <RouterLink to="/news">返回新闻动态</RouterLink>
     </section>
   </main>
