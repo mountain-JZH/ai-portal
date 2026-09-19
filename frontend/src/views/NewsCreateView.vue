@@ -2,6 +2,8 @@
 import { reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import { API_BASE_URL } from '../config/api'
+
 function getLocalDate() {
   const now = new Date()
   const localDate = new Date(
@@ -58,7 +60,7 @@ async function submitNews() {
   isSubmitting.value = true
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/news', {
+    const response = await fetch(`${API_BASE_URL}/api/news`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
+import { API_BASE_URL } from '../config/api'
+
 const route = useRoute()
 const news = ref(null)
 const loading = ref(true)
@@ -16,7 +18,7 @@ async function loadNews(newsId) {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/api/news/${encodeURIComponent(newsId)}`,
+      `${API_BASE_URL}/api/news/${encodeURIComponent(newsId)}`,
     )
 
     if (response.status === 404) {

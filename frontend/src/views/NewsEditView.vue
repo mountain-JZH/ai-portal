@@ -7,6 +7,8 @@ import {
 } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
+import { API_BASE_URL } from '../config/api'
+
 const route = useRoute()
 const newsId = computed(() => String(route.params.id))
 
@@ -55,7 +57,7 @@ async function loadNews(id) {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/api/news/${encodeURIComponent(id)}`,
+      `${API_BASE_URL}/api/news/${encodeURIComponent(id)}`,
     )
 
     if (response.status === 404) {
@@ -102,7 +104,7 @@ async function saveNews() {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/api/news/${encodeURIComponent(newsId.value)}`,
+      `${API_BASE_URL}/api/news/${encodeURIComponent(newsId.value)}`,
       {
         method: 'PUT',
         headers: {

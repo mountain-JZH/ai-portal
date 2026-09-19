@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import { API_BASE_URL } from '../config/api'
+
 const latestNews = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
@@ -11,7 +13,7 @@ async function loadNews() {
     loading.value = true
     errorMessage.value = ''
 
-    const response = await fetch('http://127.0.0.1:8000/api/news')
+    const response = await fetch(`${API_BASE_URL}/api/news`)
 
     if (!response.ok) {
       throw new Error(`请求失败：${response.status}`)

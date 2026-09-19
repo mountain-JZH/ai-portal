@@ -26,6 +26,7 @@ frontend/dist/
 
 frontend/.env
 frontend/.env.*
+!frontend/.env.example
 
 # =========================
 # Root environment files
@@ -33,6 +34,7 @@ frontend/.env.*
 
 .env
 .env.*
+!.env.example
 
 # =========================
 # Logs

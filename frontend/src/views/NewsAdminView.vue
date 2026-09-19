@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import { API_BASE_URL } from '../config/api'
+
 const newsList = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
@@ -13,7 +15,7 @@ async function loadNews() {
   errorMessage.value = ''
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/admin/news')
+    const response = await fetch(`${API_BASE_URL}/api/admin/news`)
 
     if (!response.ok) {
       throw new Error(`请求失败：${response.status}`)
@@ -43,7 +45,7 @@ async function deleteNews(news) {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/api/news/${news.id}`,
+      `${API_BASE_URL}/api/news/${news.id}`,
       { method: 'DELETE' },
     )
 

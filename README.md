@@ -61,3 +61,31 @@ ai-portal
 - 管理页面入口优化
 - 后续管理权限
 - 其他模块后台化
+
+---
+
+## 五、前端环境变量
+
+前端通过 `VITE_API_BASE_URL` 统一配置 ai-portal FastAPI 后端地址。
+
+首次配置时，在 `frontend` 目录复制示例文件：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+也可以使用 Windows `copy`：
+
+```cmd
+copy .env.example .env
+```
+
+默认配置内容：
+
+```dotenv
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+- `frontend/.env` 保存本机实际配置，不提交 Git。
+- `frontend/.env.example` 可以提交，用于新环境初始化。
+- 修改 `.env` 后需要重新启动 `npm run dev`，Vite 才会读取新的环境变量。
