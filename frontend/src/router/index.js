@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/HomeView.vue'
+import NewsAdminView from '../views/NewsAdminView.vue'
 import NewsCreateView from '../views/NewsCreateView.vue'
 import NewsDetailView from '../views/NewsDetailView.vue'
+import NewsEditView from '../views/NewsEditView.vue'
 import NewsView from '../views/NewsView.vue'
 import ToolsView from '../views/ToolsView.vue'
 import KnowledgeView from '../views/KnowledgeView.vue'
@@ -22,9 +24,19 @@ const router = createRouter({
       component: NewsView,
     },
     {
+      path: '/admin/news',
+      name: 'news-admin',
+      component: NewsAdminView,
+    },
+    {
       path: '/admin/news/new',
       name: 'news-create',
       component: NewsCreateView,
+    },
+    {
+      path: '/admin/news/:id/edit',
+      name: 'news-edit',
+      component: NewsEditView,
     },
     {
       path: '/news/:id',

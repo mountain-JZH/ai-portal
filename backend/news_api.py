@@ -9,6 +9,11 @@ router = APIRouter(
     tags=["新闻"]
 )
 
+admin_router = APIRouter(
+    prefix="/api/admin/news",
+    tags=["新闻管理"],
+)
+
 
 class NewsCreate(BaseModel):
     title: str = Field(min_length=1)
@@ -35,6 +40,44 @@ class NewsCreate(BaseModel):
 class NewsResponse(NewsCreate):
     id: int
     created_at: str
+
+
+class NewsDeleteResponse(BaseModel):
+    message: str
+    id: int
+
+
+@admin_router.get("", response_model=list[NewsResponse])
+def get_all_news():
+    """
+    获取全部新闻，供新闻管理页面使用。
+    """
+
+    connection = get_db_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT
+                id,
+                title,
+                summary,
+                content,
+                source,
+                source_type,
+                publish_date,
+                keywords,
+                url,
+                is_published,
+                created_at
+            FROM news
+            ORDER BY publish_date DESC, id DESC
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return [dict(row) for row in rows]
 
 
 @router.get("")
@@ -112,6 +155,113 @@ def get_news_by_id(news_id: int):
         )
 
     return dict(row)
+
+
+@router.put("/{news_id}", response_model=NewsResponse)
+def update_news(news_id: int, news: NewsCreate):
+    """
+    更新指定 id 的新闻，并返回更新后的完整新闻对象。
+    """
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE news
+            SET
+                title = ?,
+                summary = ?,
+                content = ?,
+                source = ?,
+                source_type = ?,
+                publish_date = ?,
+                keywords = ?,
+                url = ?,
+                is_published = ?
+            WHERE id = ?
+            """,
+            (
+                news.title,
+                news.summary,
+                news.content,
+                news.source,
+                news.source_type,
+                news.publish_date,
+                news.keywords,
+                news.url,
+                news.is_published,
+                news_id,
+            ),
+        )
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="News not found",
+            )
+
+        connection.commit()
+
+        row = connection.execute(
+            """
+            SELECT
+                id,
+                title,
+                summary,
+                content,
+                source,
+                source_type,
+                publish_date,
+                keywords,
+                url,
+                is_published,
+                created_at
+            FROM news
+            WHERE id = ?
+            """,
+            (news_id,),
+        ).fetchone()
+
+        return dict(row)
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+@router.delete("/{news_id}", response_model=NewsDeleteResponse)
+def delete_news(news_id: int):
+    """
+    删除指定 id 的新闻。
+    """
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.execute(
+            "DELETE FROM news WHERE id = ?",
+            (news_id,),
+        )
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="News not found",
+            )
+
+        connection.commit()
+
+        return {
+            "message": "News deleted",
+            "id": news_id,
+        }
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 @router.post(

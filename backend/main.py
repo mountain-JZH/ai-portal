@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from news_api import router as news_router
+from news_api import (
+    admin_router as news_admin_router,
+    router as news_router,
+)
 
 
 load_dotenv()
@@ -19,6 +22,7 @@ DIFY_API_KEY = os.getenv("DIFY_API_KEY")
 app = FastAPI()
 
 app.include_router(news_router)
+app.include_router(news_admin_router)
 
 
 app.add_middleware(
