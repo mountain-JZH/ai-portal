@@ -818,6 +818,13 @@ onUnmounted(() => {
   flex: 1;
 }
 
+@media (min-width: 769px) {
+  .calendar-view,
+  .todo-view {
+    min-height: 370px;
+  }
+}
+
 .calendar-view {
   display: flex;
   flex-direction: column;
@@ -1257,10 +1264,11 @@ onUnmounted(() => {
 
 .todo-list {
   min-height: 0;
+  max-height: 260px;
   margin-top: 13px;
   padding-right: 3px;
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
   flex-direction: column;
   gap: 7px;
   overflow-y: auto;
@@ -1510,21 +1518,14 @@ onUnmounted(() => {
   border: 0;
 }
 
-@media (max-width: 1024px) {
-  .work-calendar {
-    max-width: none;
-    height: auto;
-  }
-
+@media (max-width: 768px) {
   .todo-list {
     max-height: 320px;
-    flex: 0 1 auto;
   }
 }
 
 @media (max-width: 600px) {
   .work-calendar {
-    max-width: none;
     padding: 15px;
   }
 }

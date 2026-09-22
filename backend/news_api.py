@@ -47,6 +47,15 @@ class NewsDeleteResponse(BaseModel):
     id: int
 
 
+class NewsPublishUpdate(BaseModel):
+    is_published: int = Field(ge=0, le=1)
+
+
+class NewsPublishResponse(BaseModel):
+    id: int
+    is_published: int
+
+
 @admin_router.get("", response_model=list[NewsResponse])
 def get_all_news():
     """
@@ -224,6 +233,43 @@ def update_news(news_id: int, news: NewsCreate):
         ).fetchone()
 
         return dict(row)
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+@router.patch("/{news_id}/publish", response_model=NewsPublishResponse)
+def update_news_publish_status(news_id: int, update: NewsPublishUpdate):
+    """
+    快捷更新指定新闻的发布状态。
+    """
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE news
+            SET is_published = ?
+            WHERE id = ?
+            """,
+            (update.is_published, news_id),
+        )
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="News not found",
+            )
+
+        connection.commit()
+
+        return {
+            "id": news_id,
+            "is_published": update.is_published,
+        }
     except Exception:
         connection.rollback()
         raise

@@ -163,11 +163,11 @@ const toolCards = tools.map((tool) => ({
           </span>
 
           <component
-            :is="tool.action ? tool.action.component : 'button'"
+            :is="tool.action ? tool.action.component : 'span'"
             v-bind="tool.action ? tool.action.attributes : {}"
             class="tool-action"
-            :disabled="!tool.action"
-            :type="tool.action ? undefined : 'button'"
+            :class="{ 'tool-action--placeholder': !tool.action }"
+            :aria-disabled="tool.action ? undefined : 'true'"
           >
             {{ tool.buttonText }}
             <span v-if="tool.action">{{ tool.action.symbol }}</span>
@@ -215,7 +215,7 @@ const toolCards = tools.map((tool) => ({
   display: grid;
 
   grid-template-columns:
-    repeat(4, 1fr);
+    repeat(auto-fit, minmax(210px, 1fr));
 
   gap: 20px;
 }
@@ -393,7 +393,7 @@ const toolCards = tools.map((tool) => ({
   box-shadow: 0 8px 18px rgba(76, 85, 170, 0.16);
 }
 
-.tool-action:disabled {
+.tool-action--placeholder {
   border: 1px solid var(--color-border);
   background: #f1f3f6;
   color: #7b8492;

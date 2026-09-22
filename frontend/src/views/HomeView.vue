@@ -124,14 +124,6 @@ function finishNodeDateSelection() {
   min-width: 0;
 }
 
-.home-main-column {
-  display: block;
-}
-
-.home-side-column {
-  height: auto;
-}
-
 .home-content-grid {
   margin-top: 64px;
 
@@ -147,15 +139,6 @@ function finishNodeDateSelection() {
   width: 100%;
   max-width: none;
   margin: 0;
-}
-
-:deep(.home-news) {
-  height: auto;
-}
-
-:deep(.work-calendar) {
-  min-height: 0;
-  height: auto;
 }
 
 :deep(.home-tools) {
@@ -200,16 +183,6 @@ function finishNodeDateSelection() {
 
   .planner-expanded :deep(.home-tools) {
     margin-top: 32px;
-  }
-
-  .home-main-column,
-  .home-side-column {
-    height: auto;
-    display: block;
-  }
-
-  :deep(.work-calendar) {
-    height: auto;
   }
 
 }

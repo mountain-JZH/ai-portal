@@ -34,7 +34,6 @@ async function loadNews() {
       )
       .slice(0, 3)
 
-    console.log('首页新闻数据：', latestNews.value)
   } catch (error) {
     console.error('新闻加载失败：', error)
 

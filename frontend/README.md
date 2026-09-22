@@ -20,8 +20,8 @@ npm run build
 
 - `src/components/`：公共与首页功能组件
 - `src/views/`：路由页面
-- `src/data/`：Banner、新闻、公告和工具数据
+- `src/data/`：Banner、公告和工具配置数据
 - `src/utils/`：Todo 与四象限本地存储辅助逻辑
 - `public/tools/qstart/`：QsTArT 静态工具
 
-门户 V1 主体目前使用前端 JSON 与浏览器 localStorage，不依赖后端 API。FastAPI 后端保留在项目根目录的 `backend/`。
+门户的 Banner、公告和工具使用前端 JSON，Calendar、Todo、四象限及项目数据使用浏览器 localStorage；新闻模块通过 FastAPI API 读取和管理 SQLite 数据。完整版本记录与下一阶段计划见项目根目录 `README.md`。

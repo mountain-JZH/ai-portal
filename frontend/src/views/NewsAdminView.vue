@@ -9,6 +9,7 @@ const loading = ref(true)
 const errorMessage = ref('')
 const successMessage = ref('')
 const deletingId = ref(null)
+const publishingId = ref(null)
 
 async function loadNews() {
   loading.value = true
@@ -68,6 +69,56 @@ async function deleteNews(news) {
     errorMessage.value = '删除失败，请稍后重试'
   } finally {
     deletingId.value = null
+  }
+}
+
+async function togglePublishStatus(news) {
+  if (publishingId.value !== null) return
+
+  const nextStatus = news.is_published === 1 ? 0 : 1
+  publishingId.value = news.id
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/news/${news.id}/publish`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_published: nextStatus }),
+      },
+    )
+
+    if (response.status === 404) {
+      await loadNews()
+      errorMessage.value = '新闻不存在，列表已刷新'
+      return
+    }
+
+    if (!response.ok) {
+      throw new Error(`请求失败：${response.status}`)
+    }
+
+    const updatedNews = await response.json()
+    const currentNews = newsList.value.find(
+      (item) => item.id === updatedNews.id,
+    )
+
+    if (currentNews) {
+      currentNews.is_published = updatedNews.is_published
+    }
+
+    successMessage.value = updatedNews.is_published === 1
+      ? '新闻已发布'
+      : '新闻已下架'
+  } catch (error) {
+    console.error('新闻发布状态更新失败：', error)
+    errorMessage.value = '操作失败，请稍后重试'
+  } finally {
+    publishingId.value = null
   }
 }
 
@@ -179,6 +230,16 @@ onMounted(() => {
                   <RouterLink :to="`/admin/news/${news.id}/edit`">
                     编辑
                   </RouterLink>
+                  <button
+                    type="button"
+                    class="publish-action"
+                    :disabled="publishingId !== null"
+                    @click="togglePublishStatus(news)"
+                  >
+                    {{ publishingId === news.id
+                      ? '处理中...'
+                      : news.is_published === 1 ? '下架' : '发布' }}
+                  </button>
                   <button
                     type="button"
                     :disabled="deletingId !== null"
@@ -351,6 +412,10 @@ tbody tr:hover {
 
 .row-actions button:hover:not(:disabled) {
   color: #b45353;
+}
+
+.row-actions .publish-action:hover:not(:disabled) {
+  color: var(--color-primary);
 }
 
 .row-actions button:disabled {

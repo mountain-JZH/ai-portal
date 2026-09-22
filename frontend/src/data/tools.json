@@ -38,5 +38,15 @@
     "actionType": "none",
     "actionTarget": "",
     "buttonText": "持续接入"
+  },
+  {
+    "id": 5,
+    "icon": "DF",
+    "title": "Dify 助手",
+    "description": "预留公司内网 Dify App 的统一访问入口",
+    "status": "integrating",
+    "actionType": "none",
+    "actionTarget": "",
+    "buttonText": "待接入"
   }
 ]
