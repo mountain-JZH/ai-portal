@@ -17,6 +17,8 @@
 ```text
 ai-portal
 ├─ frontend
+│  ├─ src/layouts/AdminLayout.vue
+│  ├─ src/views/AdminDashboardView.vue
 │  └─ Vue 3 + Vite
 │
 ├─ backend
@@ -53,11 +55,14 @@ ai-portal
 - 管理页支持发布 / 下架操作，并在当前列表直接更新状态
 - 公开接口 `GET /api/news` 只返回已发布新闻
 - 管理接口 `GET /api/admin/news` 返回全部新闻
-- 顶部导航已增加“新闻管理”入口
+- 顶部导航已增加“管理后台”入口
+- 新增统一的 `AdminLayout`
+- 新增 `/admin` 管理首页与新闻统计
+- 新闻管理、新增和编辑页面已整合到后台嵌套路由
 
 ## 三、当前正在处理
 
-- V1.1 收口已完成，进入下一阶段前的稳定版本
+- V2.1 管理后台框架已完成
 
 ## 四、V1.1 收口记录
 
@@ -69,18 +74,37 @@ ai-portal
 
 Dify 助手卡片目前仅用于预留入口，不包含链接、API、iframe 或新增 Embed。后续计划由用户浏览器在公司内网环境下直接跳转至 Dify App 页面，Portal 服务器不代理 Dify 请求。
 
-## 五、下一阶段：V2 平台管理化
+## 五、V2.1 管理后台框架
 
-1. AdminLayout
-2. `/admin` Dashboard
-3. 门户 Banner / 公告后台化
-4. AI 工具后台化
-5. 登录 / 管理员权限
-6. 后续个人数据后台化
+- AdminLayout 与后台独立视觉外壳
+- `/admin` Dashboard
+- Vue Router 后台嵌套路由
+- 新闻管理、新增和编辑页面整合
+- 后台统一导航与菜单高亮
+- Dashboard 新闻总数、已发布和未发布统计
+- 门户“管理后台”入口
+
+## 六、下一阶段计划
+
+### V2.2 门户内容后台化
+
+1. Banner 管理
+2. 平台公告管理
+3. SQLite 数据表
+4. FastAPI CRUD
+5. 首页动态读取 Banner / 公告
+
+### V2.3 AI 与常用工具后台化
+
+在门户内容管理稳定后接入 AI 与常用工具的后台维护能力。
+
+### V2.4 登录 / 管理员权限
+
+最后增加登录、管理员身份和管理权限控制。
 
 ---
 
-## 六、前端环境变量
+## 七、前端环境变量
 
 前端通过 `VITE_API_BASE_URL` 统一配置 ai-portal FastAPI 后端地址。
 

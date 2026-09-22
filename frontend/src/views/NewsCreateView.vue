@@ -213,7 +213,7 @@ async function submitNews() {
       </div>
 
       <div class="form-actions">
-        <RouterLink to="/">返回首页</RouterLink>
+        <RouterLink to="/admin/news">返回新闻管理</RouterLink>
 
         <button
           type="submit"

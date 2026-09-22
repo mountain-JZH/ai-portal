@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import AdminLayout from '../layouts/AdminLayout.vue'
+import AdminDashboardView from '../views/AdminDashboardView.vue'
 import HomeView from '../views/HomeView.vue'
 import NewsAdminView from '../views/NewsAdminView.vue'
 import NewsCreateView from '../views/NewsCreateView.vue'
@@ -24,21 +26,6 @@ const router = createRouter({
       component: NewsView,
     },
     {
-      path: '/admin/news',
-      name: 'news-admin',
-      component: NewsAdminView,
-    },
-    {
-      path: '/admin/news/new',
-      name: 'news-create',
-      component: NewsCreateView,
-    },
-    {
-      path: '/admin/news/:id/edit',
-      name: 'news-edit',
-      component: NewsEditView,
-    },
-    {
       path: '/news/:id',
       name: 'news-detail',
       component: NewsDetailView,
@@ -52,6 +39,35 @@ const router = createRouter({
       path: '/knowledge',
       name: 'knowledge',
       component: KnowledgeView,
+    },
+    {
+      path: '/admin',
+      component: AdminLayout,
+      meta: {
+        layout: 'admin',
+      },
+      children: [
+        {
+          path: '',
+          name: 'admin-dashboard',
+          component: AdminDashboardView,
+        },
+        {
+          path: 'news',
+          name: 'news-admin',
+          component: NewsAdminView,
+        },
+        {
+          path: 'news/new',
+          name: 'news-create',
+          component: NewsCreateView,
+        },
+        {
+          path: 'news/:id/edit',
+          name: 'news-edit',
+          component: NewsEditView,
+        },
+      ],
     },
   ],
 })

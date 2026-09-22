@@ -55,8 +55,8 @@ const latestAnnouncement = [...announcements]
           新闻动态
         </RouterLink>
 
-        <RouterLink to="/admin/news">
-          新闻管理
+        <RouterLink to="/admin">
+          管理后台
         </RouterLink>
 
         <RouterLink to="/tools">

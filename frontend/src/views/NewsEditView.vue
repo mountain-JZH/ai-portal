@@ -165,7 +165,7 @@ watch(newsId, (id) => loadNews(id), { immediate: true })
       class="page-state"
     >
       <h2>新闻不存在</h2>
-      <RouterLink to="/news">返回新闻列表</RouterLink>
+      <RouterLink to="/admin/news">返回新闻管理</RouterLink>
     </section>
 
     <section
@@ -175,7 +175,7 @@ watch(newsId, (id) => loadNews(id), { immediate: true })
     >
       <h2>新闻加载失败</h2>
       <p>{{ loadError }}</p>
-      <RouterLink to="/news">返回新闻列表</RouterLink>
+      <RouterLink to="/admin/news">返回新闻管理</RouterLink>
     </section>
 
     <form
@@ -288,7 +288,7 @@ watch(newsId, (id) => loadNews(id), { immediate: true })
       </div>
 
       <div class="form-actions">
-        <RouterLink to="/news">返回新闻列表</RouterLink>
+        <RouterLink to="/admin/news">返回新闻管理</RouterLink>
         <RouterLink :to="`/news/${newsId}`">查看新闻</RouterLink>
 
         <button
