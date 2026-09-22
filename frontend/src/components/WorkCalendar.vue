@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import {
+  getLocalDateKey,
   notifyTodosUpdated,
   readTodoStore,
   sanitizeTodoStore,
@@ -67,6 +68,7 @@ const today = {
   month: now.getMonth(),
   day: now.getDate(),
 }
+const todoDateKey = getLocalDateKey(now)
 
 const displayYear = ref(today.year)
 const displayMonth = ref(today.month)
@@ -90,12 +92,8 @@ let todoDropDepth = 0
 const monthLabel = computed(() => `${displayYear.value}年${displayMonth.value + 1}月`)
 
 const selectedTodoDateLabel = computed(() => {
-  const weekday = new Date(
-    displayYear.value,
-    displayMonth.value,
-    selectedDay.value,
-  ).getDay()
-  return `${displayMonth.value + 1}月${selectedDay.value}日 · 星期${TODO_WEEKDAYS[weekday]}`
+  const weekday = new Date(today.year, today.month, today.day).getDay()
+  return `${today.month + 1}月${today.day}日 · 星期${TODO_WEEKDAYS[weekday]}`
 })
 
 const calendarCells = computed(() => {
@@ -109,7 +107,7 @@ const calendarCells = computed(() => {
   })
 })
 
-const currentTodos = computed(() => todosByDate.value[selectedKey.value] || [])
+const currentTodos = computed(() => todosByDate.value[todoDateKey] || [])
 const completedTodoCount = computed(
   () => currentTodos.value.filter((todo) => todo.done).length,
 )
@@ -257,7 +255,7 @@ function handleQuadrantsUpdated(event) {
 }
 
 function getTodoQuadrant(todoId) {
-  return quadrantMappings.value[selectedKey.value]?.[todoId] || ''
+  return quadrantMappings.value[todoDateKey]?.[todoId] || ''
 }
 
 function getQuadrantDefinition(todoId) {
@@ -297,13 +295,13 @@ function leaveTodoDropZone() {
 function dropIntoTodoList(event) {
   event.preventDefault()
   const todoId = props.draggingTodoId || event.dataTransfer.getData('text/plain')
-  const currentDateMapping = { ...quadrantMappings.value[selectedKey.value] }
+  const currentDateMapping = { ...quadrantMappings.value[todoDateKey] }
 
   if (todoId && currentDateMapping[todoId]) {
     delete currentDateMapping[todoId]
     const nextMappings = { ...quadrantMappings.value }
-    if (Object.keys(currentDateMapping).length) nextMappings[selectedKey.value] = currentDateMapping
-    else delete nextMappings[selectedKey.value]
+    if (Object.keys(currentDateMapping).length) nextMappings[todoDateKey] = currentDateMapping
+    else delete nextMappings[todoDateKey]
 
     quadrantMappings.value = nextMappings
     storageMessage.value = writeQuadrantStore(nextMappings) ? '已移出四象限' : '本地保存失败'
@@ -338,7 +336,7 @@ function clearMarker() {
 
 function addTodo() {
   const text = todoInput.value.trim().slice(0, 60)
-  if (!selectedKey.value || !text) return
+  if (!text) return
 
   const nextTodos = [
     ...currentTodos.value,
@@ -348,7 +346,7 @@ function addTodo() {
       done: false,
     },
   ]
-  todosByDate.value = { ...todosByDate.value, [selectedKey.value]: nextTodos }
+  todosByDate.value = { ...todosByDate.value, [todoDateKey]: nextTodos }
   todoInput.value = ''
   pendingDeleteId.value = null
   persist(TODO_STORAGE_KEY, todosByDate.value)
@@ -358,7 +356,7 @@ function toggleTodo(todoId) {
   const nextTodos = currentTodos.value.map((todo) =>
     todo.id === todoId ? { ...todo, done: !todo.done } : todo,
   )
-  todosByDate.value = { ...todosByDate.value, [selectedKey.value]: nextTodos }
+  todosByDate.value = { ...todosByDate.value, [todoDateKey]: nextTodos }
   persist(TODO_STORAGE_KEY, todosByDate.value)
 }
 
@@ -380,8 +378,8 @@ function confirmTodoDelete(todoId) {
   const nextTodosForDate = currentTodos.value.filter((todo) => todo.id !== todoId)
   const nextTodos = { ...todosByDate.value }
 
-  if (nextTodosForDate.length) nextTodos[selectedKey.value] = nextTodosForDate
-  else delete nextTodos[selectedKey.value]
+  if (nextTodosForDate.length) nextTodos[todoDateKey] = nextTodosForDate
+  else delete nextTodos[todoDateKey]
 
   todosByDate.value = nextTodos
   pendingDeleteId.value = null
