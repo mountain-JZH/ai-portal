@@ -122,13 +122,19 @@ function finishNodeDateSelection() {
 .home-main-column,
 .home-side-column {
   min-width: 0;
+  min-height: 0;
+}
+
+.home-main-column,
+.home-side-column {
+  display: flex;
 }
 
 .home-content-grid {
   margin-top: 64px;
 
   display: grid;
-  align-items: start;
+  align-items: stretch;
   gap: 24px;
   grid-template-columns: minmax(0, 2.2fr) minmax(310px, 0.9fr);
 }
@@ -139,6 +145,11 @@ function finishNodeDateSelection() {
   width: 100%;
   max-width: none;
   margin: 0;
+}
+
+:deep(.home-news),
+:deep(.work-calendar) {
+  height: 100%;
 }
 
 :deep(.home-tools) {
@@ -171,18 +182,31 @@ function finishNodeDateSelection() {
 }
 
 @media (max-width: 1024px) {
-  .home-content-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
-    margin-top: 56px;
-  }
-
   .home-planner-shell {
     margin-top: 24px;
   }
 
   .planner-expanded :deep(.home-tools) {
     margin-top: 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-content-grid {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    margin-top: 56px;
+  }
+
+  .home-main-column,
+  .home-side-column {
+    display: block;
+  }
+
+  :deep(.home-news),
+  :deep(.work-calendar) {
+    height: auto;
   }
 
 }

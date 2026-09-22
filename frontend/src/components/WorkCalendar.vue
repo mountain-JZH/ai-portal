@@ -483,226 +483,234 @@ onUnmounted(() => {
           当日待办
         </button>
       </div>
-
     </header>
 
-    <div
-      v-show="activeView === 'calendar'"
-      id="calendar-panel"
-      class="calendar-view"
-      role="tabpanel"
-      :aria-label="props.nodeDateSelectionMode.active ? '选择节点日期' : undefined"
-      :aria-labelledby="props.nodeDateSelectionMode.active ? undefined : 'calendar-tab'"
-    >
-      <div class="month-toolbar">
-        <button class="today-button" type="button" @click="goToToday">今天</button>
-        <div class="month-navigation">
-          <button type="button" aria-label="上一个月" @click="changeMonth(-1)">‹</button>
-          <strong aria-live="polite">{{ monthLabel }}</strong>
-          <button type="button" aria-label="下一个月" @click="changeMonth(1)">›</button>
+    <div class="work-card-content">
+      <div
+        id="calendar-panel"
+        class="work-panel calendar-view"
+        :class="{
+          'is-active': activeView === 'calendar',
+          'is-inactive': activeView !== 'calendar',
+        }"
+        role="tabpanel"
+        :aria-hidden="activeView !== 'calendar'"
+        :inert="activeView !== 'calendar'"
+        :aria-label="props.nodeDateSelectionMode.active ? '选择节点日期' : undefined"
+        :aria-labelledby="props.nodeDateSelectionMode.active ? undefined : 'calendar-tab'"
+      >
+        <div class="month-toolbar">
+          <button class="today-button" type="button" @click="goToToday">今天</button>
+          <div class="month-navigation">
+            <button type="button" aria-label="上一个月" @click="changeMonth(-1)">‹</button>
+            <strong aria-live="polite">{{ monthLabel }}</strong>
+            <button type="button" aria-label="下一个月" @click="changeMonth(1)">›</button>
+          </div>
         </div>
-      </div>
 
-      <div class="calendar-main">
-        <div class="weekdays" aria-hidden="true">
-          <span v-for="weekday in WEEKDAYS" :key="weekday">{{ weekday }}</span>
-        </div>
+        <div class="calendar-main">
+          <div class="weekdays" aria-hidden="true">
+            <span v-for="weekday in WEEKDAYS" :key="weekday">{{ weekday }}</span>
+          </div>
 
-        <div class="date-grid">
-          <template
-            v-for="(day, index) in calendarCells"
-            :key="`${displayYear}-${displayMonth}-${index}`"
-          >
-            <span v-if="day === null" class="date-placeholder" aria-hidden="true"></span>
-            <button
-              v-else
-              class="date-button"
-              :class="[
-                { today: isToday(day), selected: isSelected(day) },
-                getMarkerColor(day) ? `marked marker-${getMarkerColor(day)}` : '',
-              ]"
-              type="button"
-              :aria-label="dateAriaLabel(day)"
-              :aria-pressed="isSelected(day)"
-              @click="handleDateClick(day)"
+          <div class="date-grid">
+            <template
+              v-for="(day, index) in calendarCells"
+              :key="`${displayYear}-${displayMonth}-${index}`"
             >
-              <span class="date-number">{{ day }}</span>
-            </button>
-          </template>
+              <span v-if="day === null" class="date-placeholder" aria-hidden="true"></span>
+              <button
+                v-else
+                class="date-button"
+                :class="[
+                  { today: isToday(day), selected: isSelected(day) },
+                  getMarkerColor(day) ? `marked marker-${getMarkerColor(day)}` : '',
+                ]"
+                type="button"
+                :aria-label="dateAriaLabel(day)"
+                :aria-pressed="isSelected(day)"
+                @click="handleDateClick(day)"
+              >
+                <span class="date-number">{{ day }}</span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div
+          class="marker-editor"
+          :class="{ 'selection-hidden': props.nodeDateSelectionMode.active }"
+          :aria-hidden="props.nodeDateSelectionMode.active"
+        >
+          <div class="editor-heading">
+            <strong>
+              日期标记
+              <span>· {{ displayMonth + 1 }}月{{ selectedDay }}日</span>
+            </strong>
+          </div>
+
+          <div class="marker-controls">
+            <input
+              v-model="markerText"
+              type="text"
+              maxlength="30"
+              aria-label="简短日期标记"
+              placeholder="添加简短标记"
+              @keydown.enter="saveMarker"
+            />
+
+            <fieldset class="color-options">
+              <legend class="sr-only">选择标记颜色</legend>
+              <label v-for="color in MARKER_COLORS" :key="color">
+                <input
+                  v-model="markerColor"
+                  type="radio"
+                  name="marker-color"
+                  :value="color"
+                  :aria-label="MARKER_COLOR_LABELS[color]"
+                  :title="MARKER_COLOR_LABELS[color]"
+                />
+                <span :class="`color-${color}`" aria-hidden="true"></span>
+              </label>
+            </fieldset>
+
+            <button class="primary-action" type="button" @click="saveMarker">保存</button>
+            <button class="secondary-action" type="button" @click="clearMarker">清除</button>
+          </div>
+          <p class="storage-message" aria-live="polite">{{ storageMessage }}</p>
         </div>
       </div>
 
       <div
-        class="marker-editor"
-        :class="{ 'selection-hidden': props.nodeDateSelectionMode.active }"
-        :aria-hidden="props.nodeDateSelectionMode.active"
+        id="todo-panel"
+        class="work-panel todo-view"
+        :class="{
+          'is-active': activeView === 'todo',
+          'is-inactive': activeView !== 'todo',
+          'is-confirming': isConfirming,
+        }"
+        role="tabpanel"
+        :aria-hidden="activeView !== 'todo'"
+        :inert="activeView !== 'todo'"
+        aria-labelledby="todo-tab"
       >
-        <div class="editor-heading">
-          <strong>
-            日期标记
-            <span>· {{ displayMonth + 1 }}月{{ selectedDay }}日</span>
-          </strong>
+        <div class="todo-heading">
+          <strong>{{ selectedTodoDateLabel }}</strong>
+          <span class="todo-status" aria-live="polite">{{ storageMessage }}</span>
         </div>
 
-        <div class="marker-controls">
+        <div class="todo-add-row">
           <input
-            v-model="markerText"
+            v-model="todoInput"
             type="text"
-            maxlength="30"
-            aria-label="简短日期标记"
-            placeholder="添加简短标记"
-            @keydown.enter="saveMarker"
+            maxlength="60"
+            aria-label="添加一项待办"
+            placeholder="添加一项待办"
+            :disabled="isConfirming"
+            @keydown.enter.prevent="addTodo"
           />
-
-          <fieldset class="color-options">
-            <legend class="sr-only">选择标记颜色</legend>
-            <label v-for="color in MARKER_COLORS" :key="color">
-              <input
-                v-model="markerColor"
-                type="radio"
-                name="marker-color"
-                :value="color"
-                :aria-label="MARKER_COLOR_LABELS[color]"
-                :title="MARKER_COLOR_LABELS[color]"
-              />
-              <span :class="`color-${color}`" aria-hidden="true"></span>
-            </label>
-          </fieldset>
-
-          <button class="primary-action" type="button" @click="saveMarker">保存</button>
-          <button class="secondary-action" type="button" @click="clearMarker">清除</button>
+          <button type="button" :disabled="isConfirming" @click="addTodo">新增</button>
         </div>
-        <p class="storage-message" aria-live="polite">{{ storageMessage }}</p>
-      </div>
-    </div>
 
-    <div
-      v-show="activeView === 'todo'"
-      id="todo-panel"
-      class="todo-view"
-      :class="{ 'is-confirming': isConfirming }"
-      role="tabpanel"
-      aria-labelledby="todo-tab"
-    >
-      <div class="todo-heading">
-        <strong>{{ selectedTodoDateLabel }}</strong>
-        <span class="todo-status" aria-live="polite">{{ storageMessage }}</span>
-      </div>
+        <template v-if="currentTodos.length">
+          <div
+            class="todo-list"
+            :class="{ 'drop-active': todoDropActive }"
+            role="list"
+            @dragenter="enterTodoDropZone"
+            @dragover.prevent
+            @dragleave="leaveTodoDropZone"
+            @drop="dropIntoTodoList"
+          >
+            <div
+              v-for="todo in currentTodos"
+              :key="todo.id"
+              class="todo-item"
+              :class="{
+                done: todo.done,
+                confirming: pendingDeleteId === todo.id,
+                dragging: props.draggingTodoId === todo.id,
+              }"
+              role="listitem"
+            >
+              <label class="todo-check">
+                <input
+                  type="checkbox"
+                  :checked="todo.done"
+                  :disabled="isConfirming"
+                  @change="toggleTodo(todo.id)"
+                />
+                <TodoStatusIcon :done="todo.done" />
+                <span class="sr-only">切换完成状态</span>
+              </label>
+              <div class="todo-content">
+                <span class="todo-text">{{ todo.text }}</span>
+                <DeleteConfirm
+                  v-if="pendingDeleteId === todo.id"
+                  :ref="setTodoDeleteConfirm"
+                  class="todo-delete-confirm"
+                  message="删除这项待办？"
+                  @cancel="cancelTodoDelete"
+                  @confirm="confirmTodoDelete(todo.id)"
+                />
+              </div>
+              <div class="todo-drag-control">
+                <span
+                  v-if="getQuadrantDefinition(todo.id)"
+                  class="todo-quadrant-symbol"
+                  role="img"
+                  :aria-label="`已分类：${getQuadrantDefinition(todo.id).label}`"
+                  :style="{
+                    '--quadrant-symbol-color': getQuadrantDefinition(todo.id).color,
+                  }"
+                >
+                  <QuadrantSymbol :type="getQuadrantDefinition(todo.id).symbolType" size="sm" />
+                </span>
+                <button
+                  class="todo-drag-handle"
+                  type="button"
+                  draggable="true"
+                  title="拖动到四象限"
+                  aria-label="拖动任务进行优先级分类"
+                  :disabled="isConfirming"
+                  @dragstart="startTodoDrag($event, todo.id)"
+                  @dragend="endTodoDrag"
+                >
+                  <span aria-hidden="true">⠿</span>
+                </button>
+              </div>
+              <button
+                class="todo-delete"
+                :class="{ hidden: pendingDeleteId === todo.id }"
+                type="button"
+                :aria-label="`删除待办：${todo.text}`"
+                :aria-hidden="pendingDeleteId === todo.id"
+                :disabled="isConfirming"
+                :tabindex="pendingDeleteId === todo.id ? -1 : 0"
+                @click="requestTodoDelete(todo.id)"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </template>
 
-      <div class="todo-add-row">
-        <input
-          v-model="todoInput"
-          type="text"
-          maxlength="60"
-          aria-label="添加一项待办"
-          placeholder="添加一项待办"
-          :disabled="isConfirming"
-          @keydown.enter.prevent="addTodo"
-        />
-        <button type="button" :disabled="isConfirming" @click="addTodo">新增</button>
-      </div>
-
-      <template v-if="currentTodos.length">
         <div
-          class="todo-list"
+          v-else
+          class="todo-empty"
           :class="{ 'drop-active': todoDropActive }"
-          role="list"
           @dragenter="enterTodoDropZone"
           @dragover.prevent
           @dragleave="leaveTodoDropZone"
           @drop="dropIntoTodoList"
         >
-          <div
-            v-for="todo in currentTodos"
-            :key="todo.id"
-            class="todo-item"
-            :class="{
-              done: todo.done,
-              confirming: pendingDeleteId === todo.id,
-              dragging: props.draggingTodoId === todo.id,
-            }"
-            role="listitem"
-          >
-            <label class="todo-check">
-              <input
-                type="checkbox"
-                :checked="todo.done"
-                :disabled="isConfirming"
-                @change="toggleTodo(todo.id)"
-              />
-              <TodoStatusIcon :done="todo.done" />
-              <span class="sr-only">切换完成状态</span>
-            </label>
-            <div class="todo-content">
-              <span class="todo-text">{{ todo.text }}</span>
-              <DeleteConfirm
-                v-if="pendingDeleteId === todo.id"
-                :ref="setTodoDeleteConfirm"
-                class="todo-delete-confirm"
-                message="删除这项待办？"
-                @cancel="cancelTodoDelete"
-                @confirm="confirmTodoDelete(todo.id)"
-              />
-            </div>
-            <div class="todo-drag-control">
-              <span
-                v-if="getQuadrantDefinition(todo.id)"
-                class="todo-quadrant-symbol"
-                role="img"
-                :aria-label="`已分类：${getQuadrantDefinition(todo.id).label}`"
-                :style="{
-                  '--quadrant-symbol-color': getQuadrantDefinition(todo.id).color,
-                }"
-              >
-                <QuadrantSymbol
-                  :type="getQuadrantDefinition(todo.id).symbolType"
-                  size="sm"
-                />
-              </span>
-              <button
-                class="todo-drag-handle"
-                type="button"
-                draggable="true"
-                title="拖动到四象限"
-                aria-label="拖动任务进行优先级分类"
-                :disabled="isConfirming"
-                @dragstart="startTodoDrag($event, todo.id)"
-                @dragend="endTodoDrag"
-              >
-                <span aria-hidden="true">⠿</span>
-              </button>
-            </div>
-            <button
-              class="todo-delete"
-              :class="{ hidden: pendingDeleteId === todo.id }"
-              type="button"
-              :aria-label="`删除待办：${todo.text}`"
-              :aria-hidden="pendingDeleteId === todo.id"
-              :disabled="isConfirming"
-              :tabindex="pendingDeleteId === todo.id ? -1 : 0"
-              @click="requestTodoDelete(todo.id)"
-            >
-              ×
-            </button>
-          </div>
+          <strong>暂无待办事项</strong>
+          <span>添加一项今天需要完成的事情</span>
+          <span v-if="todoDropActive" class="todo-drop-hint">移出四象限</span>
         </div>
-      </template>
 
-      <div
-        v-else
-        class="todo-empty"
-        :class="{ 'drop-active': todoDropActive }"
-        @dragenter="enterTodoDropZone"
-        @dragover.prevent
-        @dragleave="leaveTodoDropZone"
-        @drop="dropIntoTodoList"
-      >
-        <strong>暂无待办事项</strong>
-        <span>添加一项今天需要完成的事情</span>
-        <span v-if="todoDropActive" class="todo-drop-hint">移出四象限</span>
+        <p class="todo-progress">已完成 {{ completedTodoCount }} / {{ currentTodos.length }}</p>
       </div>
-
-      <p class="todo-progress">已完成 {{ completedTodoCount }} / {{ currentTodos.length }}</p>
     </div>
   </section>
 </template>
@@ -713,6 +721,7 @@ onUnmounted(() => {
 
   width: 100%;
   min-width: 0;
+  min-height: 0;
   height: auto;
   padding: 18px;
   display: flex;
@@ -812,17 +821,27 @@ onUnmounted(() => {
   background: var(--color-primary-soft);
 }
 
-.calendar-view,
-.todo-view {
+.work-card-content {
+  min-width: 0;
   min-height: 0;
+  display: grid;
   flex: 1;
 }
 
-@media (min-width: 769px) {
-  .calendar-view,
-  .todo-view {
-    min-height: 370px;
-  }
+.work-panel {
+  min-width: 0;
+  min-height: 0;
+  grid-area: 1 / 1;
+}
+
+.work-panel.is-active {
+  position: relative;
+  z-index: 1;
+}
+
+.work-panel.is-inactive {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .calendar-view {
@@ -1519,6 +1538,14 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .work-card-content {
+    display: block;
+  }
+
+  .work-panel.is-inactive {
+    display: none;
+  }
+
   .todo-list {
     max-height: 320px;
   }
