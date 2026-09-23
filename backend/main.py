@@ -6,10 +6,20 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.middleware.sessions import SessionMiddleware
+from auth_api import router as auth_router
+from content_api import (
+    announcement_admin_router,
+    announcement_router,
+    banner_admin_router,
+    banner_router,
+)
+from database import init_database
 from news_api import (
     admin_router as news_admin_router,
     router as news_router,
 )
+from tools_api import admin_router as tools_admin_router, router as tools_router
 
 
 load_dotenv()
@@ -17,12 +27,35 @@ load_dotenv()
 
 DIFY_API_URL = os.getenv("DIFY_API_URL")
 DIFY_API_KEY = os.getenv("DIFY_API_KEY")
+SESSION_SECRET = os.getenv("SESSION_SECRET")
+
+if not SESSION_SECRET:
+    raise RuntimeError("SESSION_SECRET environment variable is required")
+
+
+init_database()
 
 
 app = FastAPI()
 
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    session_cookie="ai_portal_admin_session",
+    max_age=60 * 60 * 8,
+    same_site="lax",
+    https_only=os.getenv("SESSION_COOKIE_SECURE", "").lower() in {"1", "true", "yes"},
+)
+
+app.include_router(auth_router)
 app.include_router(news_router)
 app.include_router(news_admin_router)
+app.include_router(banner_router)
+app.include_router(banner_admin_router)
+app.include_router(announcement_router)
+app.include_router(announcement_admin_router)
+app.include_router(tools_router)
+app.include_router(tools_admin_router)
 
 
 app.add_middleware(

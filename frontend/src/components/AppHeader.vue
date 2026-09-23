@@ -1,12 +1,38 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
-import announcements from '../data/announcements.json'
+import { API_BASE_URL } from '../config/api'
 
-const latestAnnouncement = [...announcements]
-  .sort((first, second) =>
-    String(second.date).localeCompare(String(first.date)),
-  )[0]
+const latestAnnouncement = ref(null)
+const announcementLoading = ref(true)
+const announcementError = ref(false)
+
+async function loadLatestAnnouncement() {
+  announcementLoading.value = true
+  announcementError.value = false
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/announcements`, {
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      throw new Error(`请求失败：${response.status}`)
+    }
+
+    const data = await response.json()
+    latestAnnouncement.value = Array.isArray(data) ? data[0] || null : null
+  } catch (error) {
+    console.error('平台公告加载失败：', error)
+    latestAnnouncement.value = null
+    announcementError.value = true
+  } finally {
+    announcementLoading.value = false
+  }
+}
+
+onMounted(loadLatestAnnouncement)
 </script>
 
 <template>
@@ -33,17 +59,26 @@ const latestAnnouncement = [...announcements]
       </RouterLink>
 
       <div
-        v-if="latestAnnouncement"
         class="header-announcement"
+        :class="{ 'is-placeholder': !latestAnnouncement }"
         aria-label="最新平台公告"
+        aria-live="polite"
       >
-        <span class="announcement-label">平台公告</span>
-        <span class="announcement-title">
-          {{ latestAnnouncement.title }}
+        <template v-if="latestAnnouncement">
+          <span class="announcement-label">平台公告</span>
+          <span class="announcement-title">
+            {{ latestAnnouncement.title }}
+          </span>
+          <time :datetime="latestAnnouncement.date">
+            {{ latestAnnouncement.date }}
+          </time>
+        </template>
+
+        <span v-else class="announcement-status">
+          {{ announcementLoading
+            ? '正在加载平台公告...'
+            : announcementError ? '平台公告暂时无法加载' : '暂无平台公告' }}
         </span>
-        <time :datetime="latestAnnouncement.date">
-          {{ latestAnnouncement.date }}
-        </time>
       </div>
 
       <nav class="nav">
@@ -61,10 +96,6 @@ const latestAnnouncement = [...announcements]
 
         <RouterLink to="/tools">
           AI 工具
-        </RouterLink>
-
-        <RouterLink to="/knowledge">
-          操作知识
         </RouterLink>
       </nav>
 
@@ -189,6 +220,16 @@ const latestAnnouncement = [...announcements]
   flex-shrink: 0;
   color: var(--color-muted);
   font-size: 11px;
+}
+
+.header-announcement.is-placeholder {
+  color: var(--color-muted);
+}
+
+.announcement-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nav {

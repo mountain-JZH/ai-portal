@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
+from auth_api import get_current_admin
 from database import get_db_connection
 
 
@@ -11,6 +12,7 @@ router = APIRouter(
 
 admin_router = APIRouter(
     prefix="/api/admin/news",
+    dependencies=[Depends(get_current_admin)],
     tags=["新闻管理"],
 )
 
@@ -166,7 +168,7 @@ def get_news_by_id(news_id: int):
     return dict(row)
 
 
-@router.put("/{news_id}", response_model=NewsResponse)
+@router.put("/{news_id}", response_model=NewsResponse, dependencies=[Depends(get_current_admin)])
 def update_news(news_id: int, news: NewsCreate):
     """
     更新指定 id 的新闻，并返回更新后的完整新闻对象。
@@ -240,7 +242,7 @@ def update_news(news_id: int, news: NewsCreate):
         connection.close()
 
 
-@router.patch("/{news_id}/publish", response_model=NewsPublishResponse)
+@router.patch("/{news_id}/publish", response_model=NewsPublishResponse, dependencies=[Depends(get_current_admin)])
 def update_news_publish_status(news_id: int, update: NewsPublishUpdate):
     """
     快捷更新指定新闻的发布状态。
@@ -277,7 +279,7 @@ def update_news_publish_status(news_id: int, update: NewsPublishUpdate):
         connection.close()
 
 
-@router.delete("/{news_id}", response_model=NewsDeleteResponse)
+@router.delete("/{news_id}", response_model=NewsDeleteResponse, dependencies=[Depends(get_current_admin)])
 def delete_news(news_id: int):
     """
     删除指定 id 的新闻。
@@ -314,6 +316,7 @@ def delete_news(news_id: int):
     "",
     response_model=NewsResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_admin)],
 )
 def create_news(news: NewsCreate):
     """

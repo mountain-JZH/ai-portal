@@ -1,7 +1,8 @@
 <script setup>
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
-import tools from '../data/tools.json'
+import { API_BASE_URL } from '../config/api'
 
 defineProps({
   detailed: {
@@ -15,6 +16,11 @@ const statusLabels = {
   integrating: '待接入',
   developing: '开发中',
 }
+
+const tools = ref([])
+const loading = ref(true)
+const errorMessage = ref('')
+const placeholderCards = [1, 2, 3, 4, 5]
 
 function isSafeRoute(target) {
   return (
@@ -96,10 +102,32 @@ function resolveAction(tool) {
   return null
 }
 
-const toolCards = tools.map((tool) => ({
+const toolCards = computed(() => tools.value.map((tool) => ({
   ...tool,
   action: resolveAction(tool),
-}))
+})))
+
+async function loadTools() {
+  loading.value = true
+  errorMessage.value = ''
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/tools`)
+
+    if (!response.ok) throw new Error(`请求失败：${response.status}`)
+
+    const data = await response.json()
+    tools.value = Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('工具加载失败：', error)
+    tools.value = []
+    errorMessage.value = '工具加载失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadTools)
 </script>
 
 <template>
@@ -117,8 +145,37 @@ const toolCards = tools.map((tool) => ({
     <div
       class="tool-grid"
       :class="{ 'tool-grid--detailed': detailed }"
+      :aria-busy="loading"
     >
+      <template v-if="loading">
+        <article
+          v-for="placeholder in placeholderCards"
+          :key="placeholder"
+          class="tool-card tool-card--loading"
+          aria-hidden="true"
+        >
+          <span class="tool-loading-icon" />
+          <span class="tool-loading-title" />
+          <span class="tool-loading-line" />
+          <span class="tool-loading-line tool-loading-line--short" />
+        </article>
+        <span class="tool-loading-copy" role="status">正在加载工具...</span>
+      </template>
+
+      <div
+        v-else-if="errorMessage"
+        class="tool-state tool-state--error"
+        role="alert"
+      >
+        {{ errorMessage }}
+      </div>
+
+      <div v-else-if="!toolCards.length" class="tool-state">
+        暂无可用工具
+      </div>
+
       <component
+        v-else
         :is="!detailed && tool.action ? tool.action.component : 'article'"
         v-for="tool in toolCards"
         :key="tool.id"
@@ -246,6 +303,73 @@ const toolCards = tools.map((tool) => ({
   cursor: pointer;
 }
 
+.tool-card--loading {
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+}
+
+.tool-loading-icon,
+.tool-loading-title,
+.tool-loading-line {
+  display: block;
+  border-radius: var(--radius-xs);
+  background: #eef1f6;
+}
+
+.tool-loading-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.tool-loading-title {
+  width: 58%;
+  height: 18px;
+  margin-top: 22px;
+}
+
+.tool-loading-line {
+  width: 100%;
+  height: 12px;
+  margin-top: 14px;
+}
+
+.tool-loading-line--short {
+  width: 72%;
+  margin-top: 9px;
+}
+
+.tool-loading-copy {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tool-state {
+  min-height: 206px;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.tool-state--error {
+  color: #b45353;
+}
+
 .tool-grid--detailed {
   grid-template-columns: repeat(2, 1fr);
 }
@@ -348,6 +472,10 @@ const toolCards = tools.map((tool) => ({
 
   display: flex;
   flex-direction: column;
+}
+
+.tool-grid--detailed .tool-state {
+  min-height: 244px;
 }
 
 .tool-grid--detailed .tool-card p {

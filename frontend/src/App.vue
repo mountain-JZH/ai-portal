@@ -7,20 +7,20 @@ import AppFooter from './components/AppFooter.vue'
 import DifyChatbot from './components/DifyChatbot.vue'
 
 const route = useRoute()
-const isAdminRoute = computed(() => route.meta.layout === 'admin')
+const isStandaloneRoute = computed(() => ['admin', 'auth'].includes(route.meta.layout))
 </script>
 
 <template>
   <div class="app">
-    <AppHeader v-if="!isAdminRoute" />
+    <AppHeader v-if="!isStandaloneRoute" />
 
     <div class="app-content">
       <RouterView />
     </div>
 
-    <AppFooter v-if="!isAdminRoute" />
+    <AppFooter v-if="!isStandaloneRoute" />
 
-    <DifyChatbot v-if="!isAdminRoute" />
+    <DifyChatbot v-if="!isStandaloneRoute" />
   </div>
 </template>
 

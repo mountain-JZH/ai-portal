@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import { adminFetch } from '../utils/adminAuth'
 
 function getLocalDate() {
   const now = new Date()
@@ -60,7 +61,7 @@ async function submitNews() {
   isSubmitting.value = true
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/news`, {
+    const response = await adminFetch(`${API_BASE_URL}/api/news`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

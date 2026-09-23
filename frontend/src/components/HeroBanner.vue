@@ -7,12 +7,15 @@ import {
 } from 'vue'
 import { useRouter } from 'vue-router'
 
-import banners from '../data/banners.json'
+import { API_BASE_URL } from '../config/api'
 
 
 const router = useRouter()
+const banners = ref([])
 const currentIndex = ref(0)
 const failedImageIds = ref([])
+const loading = ref(true)
+const errorMessage = ref('')
 const visualThemes = {
   通知: {
     className: 'theme-notice',
@@ -29,10 +32,11 @@ const visualThemes = {
 }
 
 let timer = null
+let isUnmounted = false
 
 
 const currentBanner = computed(() => {
-  return banners[currentIndex.value] || null
+  return banners.value[currentIndex.value] || null
 })
 
 
@@ -73,31 +77,31 @@ function stopAutoPlay() {
 function startAutoPlay() {
   stopAutoPlay()
 
-  if (banners.length <= 1) {
+  if (banners.value.length <= 1) {
     return
   }
 
   timer = setInterval(() => {
     currentIndex.value =
-      (currentIndex.value + 1) % banners.length
+      (currentIndex.value + 1) % banners.value.length
   }, 5000)
 }
 
 
 function nextBanner() {
-  if (banners.length <= 1) {
+  if (banners.value.length <= 1) {
     return
   }
 
   currentIndex.value =
-    (currentIndex.value + 1) % banners.length
+    (currentIndex.value + 1) % banners.value.length
 
   startAutoPlay()
 }
 
 
 function previousBanner() {
-  if (banners.length <= 1) {
+  if (banners.value.length <= 1) {
     return
   }
 
@@ -105,8 +109,8 @@ function previousBanner() {
     (
       currentIndex.value
       - 1
-      + banners.length
-    ) % banners.length
+      + banners.value.length
+    ) % banners.value.length
 
   startAutoPlay()
 }
@@ -114,9 +118,9 @@ function previousBanner() {
 
 function goToBanner(index) {
   if (
-    banners.length <= 1 ||
+    banners.value.length <= 1 ||
     index < 0 ||
-    index >= banners.length
+    index >= banners.value.length
   ) {
     return
   }
@@ -124,6 +128,36 @@ function goToBanner(index) {
   currentIndex.value = index
 
   startAutoPlay()
+}
+
+
+async function loadBanners() {
+  loading.value = true
+  errorMessage.value = ''
+  stopAutoPlay()
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/banners`, {
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      throw new Error(`请求失败：${response.status}`)
+    }
+
+    const data = await response.json()
+    banners.value = Array.isArray(data) ? data : []
+    currentIndex.value = 0
+    failedImageIds.value = []
+  } catch (error) {
+    console.error('Banner 加载失败：', error)
+    banners.value = []
+    currentIndex.value = 0
+    errorMessage.value = '轮播内容暂时无法加载'
+  } finally {
+    loading.value = false
+    if (!isUnmounted) startAutoPlay()
+  }
 }
 
 
@@ -182,11 +216,13 @@ function handleImageError() {
 
 
 onMounted(() => {
-  startAutoPlay()
+  isUnmounted = false
+  loadBanners()
 })
 
 
 onUnmounted(() => {
+  isUnmounted = true
   stopAutoPlay()
 })
 </script>
@@ -318,7 +354,23 @@ onUnmounted(() => {
     </button>
 
     <div
-      v-if="!currentBanner"
+      v-if="loading"
+      class="hero-empty"
+      role="status"
+    >
+      正在加载轮播内容...
+    </div>
+
+    <div
+      v-else-if="errorMessage"
+      class="hero-empty"
+      role="alert"
+    >
+      {{ errorMessage }}
+    </div>
+
+    <div
+      v-else-if="!currentBanner"
       class="hero-empty"
     >
       暂无轮播内容

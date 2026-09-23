@@ -8,6 +8,7 @@ import {
 import { RouterLink, useRoute } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import { adminFetch } from '../utils/adminAuth'
 
 const route = useRoute()
 const newsId = computed(() => String(route.params.id))
@@ -56,7 +57,7 @@ async function loadNews(id) {
   savedNewsId.value = null
 
   try {
-    const response = await fetch(
+    const response = await adminFetch(
       `${API_BASE_URL}/api/news/${encodeURIComponent(id)}`,
     )
 
@@ -103,7 +104,7 @@ async function saveNews() {
   isSaving.value = true
 
   try {
-    const response = await fetch(
+    const response = await adminFetch(
       `${API_BASE_URL}/api/news/${encodeURIComponent(newsId.value)}`,
       {
         method: 'PUT',

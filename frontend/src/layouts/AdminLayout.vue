@@ -1,11 +1,27 @@
 <script setup>
 import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+
+import { currentAdmin, logoutAdmin } from '../utils/adminAuth'
 
 const route = useRoute()
+const router = useRouter()
 
 const isDashboardActive = computed(() => route.name === 'admin-dashboard')
 const isNewsActive = computed(() => route.path.startsWith('/admin/news'))
+const isBannerActive = computed(() => route.path.startsWith('/admin/content/banners'))
+const isAnnouncementActive = computed(() =>
+  route.path.startsWith('/admin/content/announcements'),
+)
+const isToolActive = computed(() => route.path.startsWith('/admin/tools'))
+
+async function handleLogout() {
+  try {
+    await logoutAdmin()
+  } finally {
+    await router.replace('/login')
+  }
+}
 </script>
 
 <template>
@@ -20,7 +36,13 @@ const isNewsActive = computed(() => route.path.startsWith('/admin/news'))
           </span>
         </RouterLink>
 
-        <RouterLink to="/" class="portal-link">返回门户 →</RouterLink>
+        <div class="admin-account">
+          <span class="admin-username">管理员：{{ currentAdmin?.username || '—' }}</span>
+          <button type="button" class="logout-button" @click="handleLogout">
+            退出登录
+          </button>
+          <RouterLink to="/" class="portal-link">返回门户 →</RouterLink>
+        </div>
       </div>
     </header>
 
@@ -43,6 +65,35 @@ const isNewsActive = computed(() => route.path.startsWith('/admin/news'))
               :class="{ active: isNewsActive }"
             >
               新闻管理
+            </RouterLink>
+          </div>
+
+          <div class="admin-nav-group">
+            <span class="admin-nav-label">门户内容</span>
+            <RouterLink
+              to="/admin/content/banners"
+              class="admin-nav-link admin-nav-child"
+              :class="{ active: isBannerActive }"
+            >
+              Banner 管理
+            </RouterLink>
+            <RouterLink
+              to="/admin/content/announcements"
+              class="admin-nav-link admin-nav-child"
+              :class="{ active: isAnnouncementActive }"
+            >
+              平台公告
+            </RouterLink>
+          </div>
+
+          <div class="admin-nav-group">
+            <span class="admin-nav-label">工具管理</span>
+            <RouterLink
+              to="/admin/tools"
+              class="admin-nav-link admin-nav-child"
+              :class="{ active: isToolActive }"
+            >
+              工具管理
             </RouterLink>
           </div>
 
@@ -138,6 +189,36 @@ const isNewsActive = computed(() => route.path.startsWith('/admin/news'))
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
+}
+
+.admin-account {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.admin-username {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.logout-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.logout-button:hover {
+  border-color: rgba(91, 91, 214, 0.4);
+  color: var(--color-primary);
 }
 
 .portal-link:hover,
@@ -285,7 +366,7 @@ const isNewsActive = computed(() => route.path.startsWith('/admin/news'))
 
   .admin-sidebar nav {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -314,8 +395,22 @@ const isNewsActive = computed(() => route.path.startsWith('/admin/news'))
 }
 
 @media (max-width: 500px) {
+  .admin-sidebar nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .admin-header-inner {
     align-items: flex-start;
+  }
+
+  .admin-account {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+
+  .admin-username {
+    width: 100%;
+    text-align: right;
   }
 
   .admin-brand-copy strong {

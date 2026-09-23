@@ -3,7 +3,7 @@
     <div class="footer-inner">
       <div>
         <div class="footer-title">信息运维部智能助手平台</div>
-        <div class="footer-description">智能问答 · 操作知识 · AI 工具</div>
+        <div class="footer-description">智能问答 · AI 工具</div>
       </div>
 
       <div class="footer-meta">

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import { adminFetch } from '../utils/adminAuth'
 
 const newsList = ref([])
 const loading = ref(true)
@@ -18,7 +19,7 @@ async function loadNewsStats() {
   errorMessage.value = ''
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/admin/news`)
+    const response = await adminFetch(`${API_BASE_URL}/api/admin/news`)
 
     if (!response.ok) {
       throw new Error(`请求失败：${response.status}`)
