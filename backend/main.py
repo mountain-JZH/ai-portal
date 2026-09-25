@@ -14,7 +14,7 @@ from content_api import (
     banner_admin_router,
     banner_router,
 )
-from database import init_database
+from database import get_db_connection, init_database
 from news_api import (
     admin_router as news_admin_router,
     router as news_router,
@@ -72,6 +72,18 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str
+
+
+@app.get("/api/health")
+def health_check():
+    connection = get_db_connection()
+
+    try:
+        connection.execute("SELECT 1").fetchone()
+    finally:
+        connection.close()
+
+    return {"status": "ok"}
 
 
 @app.get("/api/hello")

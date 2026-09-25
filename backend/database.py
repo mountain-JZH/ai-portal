@@ -3,13 +3,30 @@ import os
 from pathlib import Path
 
 from auth_security import hash_password
+from dotenv import load_dotenv
 
 
 # backend 文件夹路径
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
-# SQLite 数据库文件路径
-DATABASE_PATH = BASE_DIR / "ai_portal.db"
+
+def _resolve_database_path():
+    configured_path = os.getenv("DATABASE_PATH", "").strip()
+
+    if not configured_path:
+        return BASE_DIR / "ai_portal.db"
+
+    database_path = Path(configured_path).expanduser()
+
+    if not database_path.is_absolute():
+        database_path = BASE_DIR / database_path
+
+    return database_path.resolve()
+
+
+# 默认使用 backend/ai_portal.db，生产环境可通过 DATABASE_PATH 覆盖。
+DATABASE_PATH = _resolve_database_path()
 
 
 def get_db_connection():
@@ -31,6 +48,7 @@ def init_database():
     在现有数据库中补齐项目所需的数据表。
     """
 
+    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = get_db_connection()
 
     try:

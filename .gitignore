@@ -27,6 +27,7 @@ frontend/dist/
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+!frontend/.env.production.example
 
 # =========================
 # Root environment files
@@ -35,6 +36,7 @@ frontend/.env.*
 .env
 .env.*
 !.env.example
+!frontend/.env.production.example
 
 # =========================
 # Logs
@@ -42,6 +44,7 @@ frontend/.env.*
 
 *.log
 logs/
+backups/
 
 # =========================
 # IDE

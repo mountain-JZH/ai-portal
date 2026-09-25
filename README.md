@@ -222,14 +222,28 @@ SESSION_COOKIE_SECURE=false
 
 ## 十四、后续规划
 
-- V2.5 Dify 助手正式跳转：由用户浏览器访问公司内网 Dify App
-- V2.6 部署
+- V2.5 Dify 助手正式跳转因公司内网条件暂缓，尚未完成
+- V2.6B 云服务器正式部署
 
 以上项目仅作为后续规划，本阶段未开始实现。
 
 ---
 
-## 十五、本地开发启动
+## 十五、V2.6A 部署前生产化准备
+
+- 本地开发继续使用 `127.0.0.1:5173` 与 `127.0.0.1:8000`
+- 前端生产配置使用同源相对路径 `VITE_API_BASE_URL=/api`
+- 后端支持通过 `DATABASE_PATH` 将生产 SQLite 独立存放在 `/opt/ai-portal/data`
+- `SESSION_COOKIE_SECURE` 可在生产 HTTPS 环境启用，Session Secret 仍只从环境变量读取
+- 新增无需登录的 `GET /api/health`，通过轻量 `SELECT 1` 检查 SQLite 可访问性
+- 新增 Nginx 静态托管与 `/api` 反向代理模板
+- 新增非 root 用户运行的 systemd Uvicorn 服务模板
+- 新增基于 Python sqlite3 backup API 的安全备份脚本
+- 新增 `DEPLOYMENT.md`，记录普通 Linux ECS 的安装、构建、启动、日志、备份、更新与回滚步骤
+
+V2.6A 只完成部署前准备，当前尚未连接或部署任何云服务器。下一阶段为 V2.6B 云服务器正式部署。
+
+## 十六、本地开发启动
 
 推荐直接双击项目根目录中的：
 
@@ -262,7 +276,7 @@ npm run dev -- --host 127.0.0.1 --port 5173
 - Portal：`http://127.0.0.1:5173`
 - API：`http://127.0.0.1:8000`
 
-## 十六、前端环境变量
+## 十七、前端环境变量
 
 前端通过 `VITE_API_BASE_URL` 统一配置 ai-portal FastAPI 后端地址。
 
