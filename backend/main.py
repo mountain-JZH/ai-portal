@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.staticfiles import StaticFiles
 from auth_api import router as auth_router
 from content_api import (
     announcement_admin_router,
@@ -20,7 +21,7 @@ from news_api import (
     router as news_router,
 )
 from tools_api import admin_router as tools_admin_router, router as tools_router
-from upload_api import router as upload_router
+from upload_api import UPLOAD_ROOT, router as upload_router
 
 
 load_dotenv()
@@ -38,6 +39,9 @@ init_database()
 
 
 app = FastAPI()
+
+UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 
 app.add_middleware(
     SessionMiddleware,

@@ -38,6 +38,25 @@ const isSubmitting = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 const createdId = ref(null)
+const isUploading = ref(false)
+const uploadMessage = ref('')
+const uploadError = ref('')
+const imagePreviewFailed = ref(false)
+const imageInput = ref(null)
+
+const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const maxImageSize = 5 * 1024 * 1024
+const supportedActionTypes = new Set(['none', 'route', 'external'])
+
+const imagePreviewUrl = computed(() => {
+  const image = form.image.trim()
+
+  if (!image) return ''
+  if (/^https?:\/\//i.test(image)) return image
+  if (image.startsWith('/uploads/')) return `${API_BASE_URL}${image}`
+
+  return image
+})
 
 function resetForm() {
   Object.assign(form, {
@@ -52,6 +71,9 @@ function resetForm() {
     sortOrder: 0,
     isActive: true,
   })
+  uploadMessage.value = ''
+  uploadError.value = ''
+  imagePreviewFailed.value = false
 }
 
 function formatError(data, status) {
@@ -76,10 +98,72 @@ function buildPayload() {
     image: form.image,
     action: {
       type: form.actionType,
-      target: form.actionTarget,
+      target: form.actionType === 'none' ? '' : form.actionTarget,
     },
     sortOrder: Number.isInteger(form.sortOrder) ? form.sortOrder : 0,
     isActive: form.isActive ? 1 : 0,
+  }
+}
+
+function formatUploadError(data, status) {
+  if (typeof data?.detail === 'string') return data.detail
+  return `图片上传失败（HTTP ${status}），请稍后重试`
+}
+
+function openImagePicker() {
+  if (!isUploading.value && !isSubmitting.value) imageInput.value?.click()
+}
+
+async function uploadBannerImage(event) {
+  const input = event.target
+  const selectedFile = input.files?.[0]
+  input.value = ''
+
+  if (!selectedFile || isUploading.value) return
+
+  uploadMessage.value = ''
+  uploadError.value = ''
+
+  if (!allowedImageTypes.has(selectedFile.type)) {
+    uploadError.value = '请选择 JPG、PNG 或 WebP 图片'
+    return
+  }
+
+  if (selectedFile.size > maxImageSize) {
+    uploadError.value = '图片大小不能超过 5 MB'
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', selectedFile)
+  isUploading.value = true
+
+  try {
+    const response = await adminFetch(
+      `${API_BASE_URL}/api/admin/uploads/banners`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    )
+    const data = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      throw new Error(formatUploadError(data, response.status))
+    }
+
+    if (typeof data?.url !== 'string' || !data.url) {
+      throw new Error('图片上传成功，但服务器未返回图片地址')
+    }
+
+    form.image = data.url
+    uploadMessage.value = '图片上传成功'
+  } catch (error) {
+    uploadError.value = error instanceof Error
+      ? error.message
+      : '图片上传失败，请稍后重试'
+  } finally {
+    isUploading.value = false
   }
 }
 
@@ -101,6 +185,9 @@ async function loadBanner() {
     if (!response.ok) throw new Error(`请求失败：${response.status}`)
 
     const data = await response.json()
+    const actionType = supportedActionTypes.has(data.action?.type)
+      ? data.action.type
+      : 'none'
     Object.assign(form, {
       category: data.category || '',
       date: data.date || '',
@@ -108,8 +195,8 @@ async function loadBanner() {
       description: data.description || '',
       buttonText: data.buttonText || '',
       image: data.image || '',
-      actionType: data.action?.type || 'none',
-      actionTarget: data.action?.target || '',
+      actionType,
+      actionTarget: actionType === 'none' ? '' : data.action?.target || '',
       sortOrder: Number(data.sortOrder) || 0,
       isActive: Number(data.isActive) === 1,
     })
@@ -127,6 +214,9 @@ async function initializePage() {
   createdId.value = null
   notFound.value = false
   loadError.value = ''
+  uploadMessage.value = ''
+  uploadError.value = ''
+  imagePreviewFailed.value = false
 
   if (isEdit.value) {
     await loadBanner()
@@ -137,7 +227,11 @@ async function initializePage() {
 }
 
 async function submitBanner() {
-  if (isSubmitting.value || (!isEdit.value && createdId.value !== null)) return
+  if (
+    isSubmitting.value
+    || isUploading.value
+    || (!isEdit.value && createdId.value !== null)
+  ) return
 
   successMessage.value = ''
   errorMessage.value = ''
@@ -181,6 +275,9 @@ async function submitBanner() {
 }
 
 watch(() => route.fullPath, initializePage, { immediate: true })
+watch(() => form.image, () => {
+  imagePreviewFailed.value = false
+})
 </script>
 
 <template>
@@ -265,15 +362,73 @@ watch(() => route.fullPath, initializePage, { immediate: true })
           <input v-model.number="form.sortOrder" type="number" min="0" step="1">
         </label>
 
-        <label class="content-form-field content-form-field-wide">
-          <span>图片路径或 URL</span>
-          <input
-            v-model="form.image"
-            type="text"
-            maxlength="1000"
-            placeholder="/images/banners/example.jpg 或 https://..."
-          >
-        </label>
+        <div class="content-form-field content-form-field-wide banner-image-field">
+          <span>Banner 图片</span>
+
+          <div class="banner-upload-area">
+            <div class="banner-upload-copy">
+              <strong>{{ form.image ? '更换当前图片' : '上传 Banner 图片' }}</strong>
+              <small>JPG / PNG / WebP，最大 5 MB</small>
+            </div>
+
+            <button
+              type="button"
+              class="banner-file-button"
+              :disabled="isUploading || isSubmitting"
+              @click="openImagePicker"
+            >
+              {{ isUploading
+                ? '正在上传...'
+                : form.image ? '重新选择图片' : '选择图片' }}
+            </button>
+            <input
+              ref="imageInput"
+              class="banner-file-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              :disabled="isUploading || isSubmitting"
+              @change="uploadBannerImage"
+            >
+          </div>
+
+          <p v-if="uploadMessage" class="banner-upload-success" role="status">
+            {{ uploadMessage }}
+          </p>
+          <p v-if="uploadError" class="banner-upload-error" role="alert">
+            {{ uploadError }}
+          </p>
+
+          <div v-if="form.image" class="banner-image-current">
+            <div
+              v-if="imagePreviewUrl && !imagePreviewFailed"
+              class="banner-image-preview"
+            >
+              <img
+                :src="imagePreviewUrl"
+                alt="当前 Banner 图片预览"
+                @error="imagePreviewFailed = true"
+              >
+            </div>
+            <p v-else class="banner-preview-unavailable">
+              当前图片暂时无法预览
+            </p>
+            <p class="banner-image-path" :title="form.image">
+              当前路径：<code>{{ form.image }}</code>
+            </p>
+          </div>
+
+          <label class="banner-external-url">
+            <span>或使用外部图片 URL</span>
+            <input
+              v-model="form.image"
+              type="text"
+              inputmode="url"
+              maxlength="1000"
+              placeholder="https://example.com/banner.jpg"
+              :disabled="isUploading"
+            >
+          </label>
+        </div>
 
         <label class="content-form-field">
           <span>动作类型</span>
@@ -281,7 +436,6 @@ watch(() => route.fullPath, initializePage, { immediate: true })
             <option value="none">无动作</option>
             <option value="route">站内路由</option>
             <option value="external">外部链接</option>
-            <option value="dify">Dify 助手</option>
           </select>
         </label>
 
@@ -292,6 +446,7 @@ watch(() => route.fullPath, initializePage, { immediate: true })
             type="text"
             maxlength="1000"
             placeholder="例如：/news/1"
+            :disabled="form.actionType === 'none'"
           >
         </label>
       </div>
@@ -331,7 +486,7 @@ watch(() => route.fullPath, initializePage, { immediate: true })
         <RouterLink to="/admin/content/banners">返回 Banner 管理</RouterLink>
         <button
           type="submit"
-          :disabled="isSubmitting || (!isEdit && createdId !== null)"
+          :disabled="isSubmitting || isUploading || (!isEdit && createdId !== null)"
         >
           {{ isSubmitting
             ? '正在提交...'
@@ -341,3 +496,145 @@ watch(() => route.fullPath, initializePage, { immediate: true })
     </form>
   </main>
 </template>
+
+<style scoped>
+.banner-image-field {
+  gap: 12px;
+}
+
+.banner-upload-area {
+  min-width: 0;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-soft);
+}
+
+.banner-upload-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.banner-upload-copy strong {
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.banner-upload-copy small,
+.banner-external-url > span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.banner-file-button {
+  min-height: 38px;
+  padding: 0 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(91, 91, 214, 0.3);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.banner-file-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.banner-file-input {
+  display: none;
+}
+
+.banner-upload-success,
+.banner-upload-error,
+.banner-preview-unavailable,
+.banner-image-path {
+  margin: 0;
+  font-size: 13px;
+}
+
+.banner-upload-success {
+  color: #36855a;
+}
+
+.banner-upload-error {
+  color: #b45353;
+}
+
+.banner-image-current {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.banner-image-preview {
+  width: 100%;
+  max-height: 280px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+}
+
+.banner-image-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 258px;
+  object-fit: contain;
+}
+
+.banner-preview-unavailable,
+.banner-image-path {
+  color: var(--color-muted);
+}
+
+.banner-image-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.banner-image-path code {
+  color: var(--color-text-secondary);
+}
+
+.banner-external-url {
+  display: grid;
+  gap: 7px;
+}
+
+@media (max-width: 600px) {
+  .banner-upload-area {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .banner-file-button {
+    width: 100%;
+  }
+
+  .banner-image-preview {
+    max-height: 220px;
+  }
+
+  .banner-image-preview img {
+    max-height: 198px;
+  }
+}
+</style>

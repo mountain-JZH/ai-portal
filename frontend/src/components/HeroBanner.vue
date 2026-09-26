@@ -40,6 +40,25 @@ const currentBanner = computed(() => {
 })
 
 
+const currentBannerImageUrl = computed(() => {
+  const image = currentBanner.value?.image
+
+  if (!image) {
+    return ''
+  }
+
+  if (/^https?:\/\//i.test(image)) {
+    return image
+  }
+
+  if (image.startsWith('/uploads/')) {
+    return `${API_BASE_URL}${image}`
+  }
+
+  return image
+})
+
+
 const hasBannerImage = computed(() => {
   return (
     Boolean(currentBanner.value?.image) &&
@@ -289,7 +308,7 @@ onUnmounted(() => {
         <img
           v-if="hasBannerImage"
           :key="currentBanner.image"
-          :src="currentBanner.image"
+          :src="currentBannerImageUrl"
           :alt="currentBanner.title"
           class="banner-image"
           @error="handleImageError"
