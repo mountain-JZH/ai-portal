@@ -17,6 +17,10 @@ server {
         proxy_pass_header Set-Cookie;
     }
 
+    location /uploads/ {
+        alias /opt/ai-portal/uploads/;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

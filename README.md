@@ -240,6 +240,7 @@ SESSION_COOKIE_SECURE=false
 - 新增非 root 用户运行的 systemd Uvicorn 服务模板
 - 新增基于 Python sqlite3 backup API 的安全备份脚本
 - 新增 `DEPLOYMENT.md`，记录普通 Linux ECS 的安装、构建、启动、日志、备份、更新与回滚步骤
+- V2.7 已开始支持 ECS 本地 Banner / 新闻图片上传
 
 V2.6A 只完成部署前准备，当前尚未连接或部署任何云服务器。下一阶段为 V2.6B 云服务器正式部署。
 

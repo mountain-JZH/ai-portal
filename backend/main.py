@@ -20,6 +20,7 @@ from news_api import (
     router as news_router,
 )
 from tools_api import admin_router as tools_admin_router, router as tools_router
+from upload_api import router as upload_router
 
 
 load_dotenv()
@@ -56,6 +57,7 @@ app.include_router(announcement_router)
 app.include_router(announcement_admin_router)
 app.include_router(tools_router)
 app.include_router(tools_admin_router)
+app.include_router(upload_router)
 
 
 app.add_middleware(

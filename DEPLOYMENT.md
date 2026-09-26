@@ -13,11 +13,14 @@
 │  └─ dist/
 ├─ data/
 │  └─ ai_portal.db
+├─ uploads/
+│  ├─ banners/
+│  └─ news/
 ├─ backups/
 └─ deploy/
 ```
 
-数据库不要放入 `frontend/dist`，也不要通过 Git 管理。
+数据库和 `uploads` 都属于生产持久化数据，不要放入 `frontend/dist`，不要通过 Git 管理，也不要在代码发布时覆盖。
 
 ## 2. 准备服务器
 
@@ -52,7 +55,7 @@ sudo chown -R aiportal:aiportal /opt/ai-portal
 ```bash
 cd /opt/ai-portal
 sudo -u aiportal git clone <repository-url> .
-sudo -u aiportal mkdir -p data backups
+sudo -u aiportal mkdir -p data backups uploads/banners uploads/news
 ```
 
 如果采用文件上传，请保持同样的目录结构和属主权限。
@@ -144,6 +147,8 @@ sudo systemctl reload nginx
 ```
 
 模板使用 `server_name _;`。正式使用域名时可替换为实际域名；HTTPS 证书配置不在本阶段范围内。SPA 路由由 `try_files` 回退到 `index.html`，QsTArT 继续作为 `/tools/qstart/index.html` 静态文件提供。
+
+`/uploads/` 通过 Nginx `alias` 映射到 `/opt/ai-portal/uploads/`，其中 Banner 和新闻图片分别保存在 `uploads/banners` 与 `uploads/news`。该目录必须作为持久化数据单独保留，更新代码或重新构建前端时不得覆盖。
 
 ## 9. 配置 systemd
 
