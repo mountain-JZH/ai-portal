@@ -41,11 +41,16 @@ const createdId = ref(null)
 const isUploading = ref(false)
 const uploadMessage = ref('')
 const uploadError = ref('')
+const uploadStage = ref('idle')
+const imageOptimizationInfo = ref(null)
 const imagePreviewFailed = ref(false)
 const imageInput = ref(null)
 
 const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const maxImageSize = 5 * 1024 * 1024
+const maxBannerWidth = 1600
+const maxBannerHeight = 900
+const webpQuality = 0.82
 const supportedActionTypes = new Set(['none', 'route', 'external'])
 
 const imagePreviewUrl = computed(() => {
@@ -57,6 +62,86 @@ const imagePreviewUrl = computed(() => {
 
   return image
 })
+
+function formatFileSize(size) {
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function createWebpFileName(originalName) {
+  const baseName = originalName.replace(/\.[^.]+$/, '').trim() || 'banner'
+  return `${baseName}.webp`
+}
+
+async function optimizeBannerImage(file) {
+  const objectUrl = URL.createObjectURL(file)
+  const image = new Image()
+
+  try {
+    await new Promise((resolve, reject) => {
+      image.onload = resolve
+      image.onerror = () => reject(new Error('图片无法解码，请检查文件是否完整'))
+      image.src = objectUrl
+    })
+
+    const originalWidth = image.naturalWidth
+    const originalHeight = image.naturalHeight
+
+    if (!originalWidth || !originalHeight) {
+      throw new Error('无法读取图片尺寸，请重新选择图片')
+    }
+
+    const scale = Math.min(
+      1,
+      maxBannerWidth / originalWidth,
+      maxBannerHeight / originalHeight,
+    )
+    const optimizedWidth = Math.max(1, Math.round(originalWidth * scale))
+    const optimizedHeight = Math.max(1, Math.round(originalHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = optimizedWidth
+    canvas.height = optimizedHeight
+
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('浏览器无法创建图片处理画布')
+
+    context.drawImage(image, 0, 0, optimizedWidth, optimizedHeight)
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (result) => {
+          if (result) resolve(result)
+          else reject(new Error('图片转换失败，请更换图片后重试'))
+        },
+        'image/webp',
+        webpQuality,
+      )
+    })
+
+    if (blob.type !== 'image/webp') {
+      throw new Error('当前浏览器不支持 WebP 图片转换')
+    }
+
+    return {
+      file: new File([blob], createWebpFileName(file.name), {
+        type: 'image/webp',
+        lastModified: Date.now(),
+      }),
+      originalWidth,
+      originalHeight,
+      optimizedWidth,
+      optimizedHeight,
+    }
+  } catch (error) {
+    if (error instanceof Error) throw error
+    throw new Error('图片处理失败，请重新选择图片', { cause: error })
+  } finally {
+    image.onload = null
+    image.onerror = null
+    URL.revokeObjectURL(objectUrl)
+  }
+}
 
 function resetForm() {
   Object.assign(form, {
@@ -73,6 +158,8 @@ function resetForm() {
   })
   uploadMessage.value = ''
   uploadError.value = ''
+  uploadStage.value = 'idle'
+  imageOptimizationInfo.value = null
   imagePreviewFailed.value = false
 }
 
@@ -123,6 +210,7 @@ async function uploadBannerImage(event) {
 
   uploadMessage.value = ''
   uploadError.value = ''
+  imageOptimizationInfo.value = null
 
   if (!allowedImageTypes.has(selectedFile.type)) {
     uploadError.value = '请选择 JPG、PNG 或 WebP 图片'
@@ -134,11 +222,24 @@ async function uploadBannerImage(event) {
     return
   }
 
-  const formData = new FormData()
-  formData.append('file', selectedFile)
   isUploading.value = true
+  uploadStage.value = 'processing'
 
   try {
+    const optimized = await optimizeBannerImage(selectedFile)
+    imageOptimizationInfo.value = {
+      originalSize: selectedFile.size,
+      originalWidth: optimized.originalWidth,
+      originalHeight: optimized.originalHeight,
+      optimizedSize: optimized.file.size,
+      optimizedWidth: optimized.optimizedWidth,
+      optimizedHeight: optimized.optimizedHeight,
+    }
+
+    const formData = new FormData()
+    formData.append('file', optimized.file)
+    uploadStage.value = 'uploading'
+
     const response = await adminFetch(
       `${API_BASE_URL}/api/admin/uploads/banners`,
       {
@@ -157,13 +258,14 @@ async function uploadBannerImage(event) {
     }
 
     form.image = data.url
-    uploadMessage.value = '图片上传成功'
+    uploadMessage.value = '图片优化并上传成功'
   } catch (error) {
     uploadError.value = error instanceof Error
       ? error.message
       : '图片上传失败，请稍后重试'
   } finally {
     isUploading.value = false
+    uploadStage.value = 'idle'
   }
 }
 
@@ -216,6 +318,8 @@ async function initializePage() {
   loadError.value = ''
   uploadMessage.value = ''
   uploadError.value = ''
+  uploadStage.value = 'idle'
+  imageOptimizationInfo.value = null
   imagePreviewFailed.value = false
 
   if (isEdit.value) {
@@ -369,6 +473,7 @@ watch(() => form.image, () => {
             <div class="banner-upload-copy">
               <strong>{{ form.image ? '更换当前图片' : '上传 Banner 图片' }}</strong>
               <small>JPG / PNG / WebP，最大 5 MB</small>
+              <small>上传后自动优化为 WebP，最大 1600 × 900</small>
             </div>
 
             <button
@@ -377,8 +482,10 @@ watch(() => form.image, () => {
               :disabled="isUploading || isSubmitting"
               @click="openImagePicker"
             >
-              {{ isUploading
-                ? '正在上传...'
+              {{ uploadStage === 'processing'
+                ? '处理中...'
+                : uploadStage === 'uploading'
+                  ? '上传中...'
                 : form.image ? '重新选择图片' : '选择图片' }}
             </button>
             <input
@@ -390,6 +497,22 @@ watch(() => form.image, () => {
               @change="uploadBannerImage"
             >
           </div>
+
+          <p
+            v-if="imageOptimizationInfo"
+            class="banner-optimization-info"
+            role="status"
+          >
+            <span>
+              原图：{{ formatFileSize(imageOptimizationInfo.originalSize) }} /
+              {{ imageOptimizationInfo.originalWidth }}×{{ imageOptimizationInfo.originalHeight }}
+            </span>
+            <span aria-hidden="true">→</span>
+            <span>
+              优化后：{{ formatFileSize(imageOptimizationInfo.optimizedSize) }} /
+              {{ imageOptimizationInfo.optimizedWidth }}×{{ imageOptimizationInfo.optimizedHeight }}
+            </span>
+          </p>
 
           <p v-if="uploadMessage" class="banner-upload-success" role="status">
             {{ uploadMessage }}
@@ -558,6 +681,7 @@ watch(() => form.image, () => {
 
 .banner-upload-success,
 .banner-upload-error,
+.banner-optimization-info,
 .banner-preview-unavailable,
 .banner-image-path {
   margin: 0;
@@ -570,6 +694,13 @@ watch(() => form.image, () => {
 
 .banner-upload-error {
   color: #b45353;
+}
+
+.banner-optimization-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--color-text-secondary);
 }
 
 .banner-image-current {

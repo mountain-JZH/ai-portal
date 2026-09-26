@@ -148,6 +148,15 @@ sudo systemctl reload nginx
 
 模板使用 `server_name _;`。正式使用域名时可替换为实际域名；HTTPS 证书配置不在本阶段范围内。SPA 路由由 `try_files` 回退到 `index.html`，QsTArT 继续作为 `/tools/qstart/index.html` 静态文件提供。
 
+Banner 图片上传后端的单文件业务限制为 5 MB，Nginx 模板在 `server` 级同步设置 `client_max_body_size 5m;`。如果未配置，请求可能在到达 FastAPI 前被 Nginx 默认请求体限制拒绝，并返回 HTTP 413。
+
+生产环境修改 Nginx 配置后，先检查配置再平滑重载：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
 `/uploads/` 通过 Nginx `alias` 映射到 `/opt/ai-portal/uploads/`，其中 Banner 和新闻图片分别保存在 `uploads/banners` 与 `uploads/news`。该目录必须作为持久化数据单独保留，更新代码或重新构建前端时不得覆盖。
 
 ## 9. 配置 systemd
