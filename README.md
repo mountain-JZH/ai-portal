@@ -64,7 +64,7 @@ ai-portal
 
 - V2.3 工具数据层、管理后台与门户 API 化已完成
 - 新闻、Banner、公告和工具均已采用 SQLite / FastAPI 统一内容链路
-- 门户已移除独立“操作知识”页面及 `/knowledge` 路由；Dify 与未来知识问答能力保持不变
+- 门户已新增 `/assistant` Dify iframe 独立页面；工具卡仍由管理后台决定何时启用入口
 
 ## 四、V1.1 收口记录
 
@@ -78,7 +78,7 @@ ai-portal
 - 在“AI 与常用工具”中增加 Dify 助手占位卡片
 - 完成前端 lint、生产构建与 Python 语法检查
 
-Dify 助手卡片目前仅用于预留入口，不包含链接、API、iframe 或新增 Embed。后续计划由用户浏览器在公司内网环境下直接跳转至 Dify App 页面，Portal 服务器不代理 Dify 请求。
+Dify 助手统一通过 `/assistant` 独立嵌入页面访问。
 
 ## 五、V2.1 管理后台框架
 
@@ -151,7 +151,7 @@ SQLite
 - 支持启用 / 停用，并在列表中本地更新状态
 - 支持维护 `status`、`actionType`、`actionTarget` 和 `sortOrder`
 - 工具管理已纳入现有 `AdminLayout`，新增和编辑路由均保持工具管理菜单高亮
-- Dify 助手仍保持待接入占位，未填写地址，未修改现有 DifyChatbot
+- Dify 助手在 V2.3B 阶段仍保持待接入占位，未填写地址
 - V2.3B 阶段门户仍使用静态工具数据，V2.3C 已完成 API 迁移
 
 ## 十一、V2.3C 工具门户 API 化
@@ -188,7 +188,6 @@ Portal
 - Fresh DB 可创建 `news`、`banners`、`announcements`、`tools` 四张空表，不依赖前端 JSON
 - 新闻、Banner、公告和工具的旧静态 JSON 均已清理，SQLite 是唯一内容数据源
 - `/knowledge` 与“操作知识”入口已移除，QsTArT 静态工具继续保留
-- Dify 助手工具卡仍为待接入占位，现有 DifyChatbot 保持不变
 - Todo、Calendar、Planner 与四象限继续使用浏览器本地存储，不进入内容数据库
 - 管理后台和全部管理写操作已在 V2.4 接入单管理员认证
 
@@ -222,7 +221,7 @@ SESSION_COOKIE_SECURE=false
 
 ## 十四、后续规划
 
-- V2.5 Dify 助手正式跳转因公司内网条件暂缓，尚未完成
+- V2.8 后续根据公司内网环境验证 Dify iframe 兼容性
 - V2.6B 云服务器正式部署
 
 以上项目仅作为后续规划，本阶段未开始实现。
@@ -279,7 +278,7 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 ## 十七、前端环境变量
 
-前端通过 `VITE_API_BASE_URL` 统一配置 ai-portal FastAPI 后端地址。
+前端通过 `VITE_API_BASE_URL` 统一配置 ai-portal FastAPI 后端地址，通过 `VITE_DIFY_EMBED_URL` 配置 `/assistant` 使用的 Dify iframe 地址。
 
 首次配置时，在 `frontend` 目录复制示例文件：
 
@@ -297,8 +296,11 @@ copy .env.example .env
 
 ```dotenv
 VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_DIFY_EMBED_URL=https://your-dify-host/chatbot/your-app-id
 ```
 
 - `frontend/.env` 保存本机实际配置，不提交 Git。
 - `frontend/.env.example` 可以提交，用于新环境初始化。
 - 修改 `.env` 后需要重新启动 `npm run dev`，Vite 才会读取新的环境变量。
+- 未配置 `VITE_DIFY_EMBED_URL` 时，`/assistant` 显示安全的未配置提示，不创建空 iframe。
+- `VITE_` 环境变量会编译进浏览器代码，只能存放公开配置；不得保存 Dify API Key、Token、Cookie 或密码。

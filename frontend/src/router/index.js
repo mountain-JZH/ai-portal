@@ -6,6 +6,7 @@ import AnnouncementAdminView from '../views/AnnouncementAdminView.vue'
 import AnnouncementFormView from '../views/AnnouncementFormView.vue'
 import BannerAdminView from '../views/BannerAdminView.vue'
 import BannerFormView from '../views/BannerFormView.vue'
+import DifyAssistantView from '../views/DifyAssistantView.vue'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import NewsAdminView from '../views/NewsAdminView.vue'
@@ -41,6 +42,11 @@ const router = createRouter({
       path: '/tools',
       name: 'tools',
       component: ToolsView,
+    },
+    {
+      path: '/assistant',
+      name: 'dify-assistant',
+      component: DifyAssistantView,
     },
     {
       path: '/login',

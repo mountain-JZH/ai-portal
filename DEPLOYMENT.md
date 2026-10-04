@@ -126,6 +126,15 @@ sudo -u aiportal npm install
 sudo -u aiportal npm run build
 ```
 
+构建前编辑 `frontend/.env.production`，配置公开的 Dify iframe Embed 地址：
+
+```dotenv
+VITE_API_BASE_URL=/api
+VITE_DIFY_EMBED_URL=https://your-dify-host/chatbot/your-app-id
+```
+
+`VITE_DIFY_EMBED_URL` 只决定浏览器在 `/assistant` 页面直接加载哪个 iframe，不经过 FastAPI 代理。所有 `VITE_` 环境变量都会被编译到浏览器前端，不是秘密存储机制，禁止在其中保存 API Key、Token、Cookie 或密码。
+
 确认以下文件存在：
 
 ```bash
