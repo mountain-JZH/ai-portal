@@ -19,6 +19,7 @@ function getLocalDateKey() {
 }
 
 const form = reactive({
+  bannerType: 'standard',
   category: '',
   date: getLocalDateKey(),
   title: '',
@@ -30,6 +31,7 @@ const form = reactive({
   sortOrder: 0,
   isActive: true,
 })
+const isImageOnly = computed(() => form.bannerType === 'image_only')
 
 const loading = ref(false)
 const notFound = ref(false)
@@ -145,6 +147,7 @@ async function optimizeBannerImage(file) {
 
 function resetForm() {
   Object.assign(form, {
+    bannerType: 'standard',
     category: '',
     date: getLocalDateKey(),
     title: '',
@@ -177,6 +180,7 @@ function formatError(data, status) {
 
 function buildPayload() {
   return {
+    bannerType: form.bannerType,
     category: form.category,
     date: form.date,
     title: form.title.trim(),
@@ -184,8 +188,8 @@ function buildPayload() {
     buttonText: form.buttonText,
     image: form.image,
     action: {
-      type: form.actionType,
-      target: form.actionType === 'none' ? '' : form.actionTarget,
+      type: isImageOnly.value ? 'none' : form.actionType,
+      target: isImageOnly.value || form.actionType === 'none' ? '' : form.actionTarget,
     },
     sortOrder: Number.isInteger(form.sortOrder) ? form.sortOrder : 0,
     isActive: form.isActive ? 1 : 0,
@@ -291,6 +295,7 @@ async function loadBanner() {
       ? data.action.type
       : 'none'
     Object.assign(form, {
+      bannerType: data.bannerType === 'image_only' ? 'image_only' : 'standard',
       category: data.category || '',
       date: data.date || '',
       title: data.title || '',
@@ -340,8 +345,13 @@ async function submitBanner() {
   successMessage.value = ''
   errorMessage.value = ''
 
-  if (!form.title.trim()) {
+  if (!isImageOnly.value && !form.title.trim()) {
     errorMessage.value = '请输入 Banner 标题'
+    return
+  }
+
+  if (isImageOnly.value && !form.image.trim()) {
+    errorMessage.value = '请先上传纯图片头图'
     return
   }
 
@@ -416,6 +426,15 @@ watch(() => form.image, () => {
     <form v-else class="content-form" @submit.prevent="submitBanner">
       <div class="content-form-grid">
         <label class="content-form-field content-form-field-wide">
+          <span>Banner 类型</span>
+          <select v-model="form.bannerType">
+            <option value="standard">常规 Banner</option>
+            <option value="image_only">纯图片头图</option>
+          </select>
+          <small v-if="isImageOnly">只需上传图片；前台不叠加文案，也不能点击跳转。新建时系统会生成后台识别标题。</small>
+        </label>
+
+        <label v-if="!isImageOnly" class="content-form-field content-form-field-wide">
           <span>标题 <strong aria-hidden="true">*</strong></span>
           <input
             v-model="form.title"
@@ -426,7 +445,7 @@ watch(() => form.image, () => {
           >
         </label>
 
-        <label class="content-form-field">
+        <label v-if="!isImageOnly" class="content-form-field">
           <span>分类</span>
           <input
             v-model="form.category"
@@ -436,12 +455,12 @@ watch(() => form.image, () => {
           >
         </label>
 
-        <label class="content-form-field">
+        <label v-if="!isImageOnly" class="content-form-field">
           <span>日期</span>
           <input v-model="form.date" type="date">
         </label>
 
-        <label class="content-form-field content-form-field-wide">
+        <label v-if="!isImageOnly" class="content-form-field content-form-field-wide">
           <span>描述</span>
           <textarea
             v-model="form.description"
@@ -451,7 +470,7 @@ watch(() => form.image, () => {
           />
         </label>
 
-        <label class="content-form-field">
+        <label v-if="!isImageOnly" class="content-form-field">
           <span>按钮文字</span>
           <input
             v-model="form.buttonText"
@@ -553,7 +572,7 @@ watch(() => form.image, () => {
           </label>
         </div>
 
-        <label class="content-form-field">
+        <label v-if="!isImageOnly" class="content-form-field">
           <span>动作类型</span>
           <select v-model="form.actionType">
             <option value="none">无动作</option>
@@ -562,7 +581,7 @@ watch(() => form.image, () => {
           </select>
         </label>
 
-        <label class="content-form-field">
+        <label v-if="!isImageOnly" class="content-form-field">
           <span>动作目标</span>
           <input
             v-model="form.actionTarget"

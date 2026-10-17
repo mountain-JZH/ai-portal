@@ -1,7 +1,8 @@
 from typing import Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from auth_api import get_current_admin
 from database import get_db_connection
@@ -41,9 +42,10 @@ class BannerAction(BaseModel):
 
 
 class BannerCreate(BaseModel):
+    bannerType: Literal["standard", "image_only"] = "standard"
     category: str = Field(default="", max_length=50)
     date: str = Field(default="", max_length=20)
-    title: str = Field(min_length=1, max_length=200)
+    title: str = Field(default="", max_length=200)
     description: str = Field(default="", max_length=1000)
     buttonText: str = Field(default="", max_length=100)
     image: str = Field(default="", max_length=1000)
@@ -56,15 +58,23 @@ class BannerCreate(BaseModel):
     def validate_title(cls, value):
         title = value.strip()
 
-        if not title:
-            raise ValueError("title 不能为空")
-
         return title
 
     @field_validator("category", "date", "description", "buttonText", "image")
     @classmethod
     def normalize_text(cls, value):
         return value.strip()
+
+    @model_validator(mode="after")
+    def validate_banner_type(self):
+        if self.bannerType == "standard" and not self.title:
+            raise ValueError("常规 Banner 必须填写标题")
+        if self.bannerType == "image_only":
+            if not self.image:
+                raise ValueError("纯图片头图必须上传图片")
+            if self.action.type != "none" or self.action.target:
+                raise ValueError("纯图片头图不能设置点击动作")
+        return self
 
 
 class BannerResponse(BannerCreate):
@@ -125,6 +135,7 @@ BANNER_SELECT = """
         image,
         action_type,
         action_target,
+        banner_type,
         sort_order,
         is_active,
         created_at
@@ -147,6 +158,7 @@ ANNOUNCEMENT_SELECT = """
 def _serialize_banner(row):
     return {
         "id": row["id"],
+        "bannerType": row["banner_type"],
         "category": row["category"],
         "date": row["publish_date"],
         "title": row["title"],
@@ -256,20 +268,22 @@ def create_banner(banner: BannerCreate):
                 image,
                 action_type,
                 action_target,
+                banner_type,
                 sort_order,
                 is_active
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 banner.category,
                 banner.date,
-                banner.title,
+                banner.title or f"纯图片头图-{uuid4().hex[:8]}",
                 banner.description,
                 banner.buttonText,
                 banner.image,
                 banner.action.type,
                 banner.action.target,
+                banner.bannerType,
                 banner.sortOrder,
                 banner.isActive,
             ),
@@ -303,6 +317,7 @@ def update_banner(banner_id: int, banner: BannerCreate):
                 image = ?,
                 action_type = ?,
                 action_target = ?,
+                banner_type = ?,
                 sort_order = ?,
                 is_active = ?
             WHERE id = ?
@@ -310,12 +325,13 @@ def update_banner(banner_id: int, banner: BannerCreate):
             (
                 banner.category,
                 banner.date,
-                banner.title,
+                banner.title or f"纯图片头图-{banner_id}",
                 banner.description,
                 banner.buttonText,
                 banner.image,
                 banner.action.type,
                 banner.action.target,
+                banner.bannerType,
                 banner.sortOrder,
                 banner.isActive,
                 banner_id,

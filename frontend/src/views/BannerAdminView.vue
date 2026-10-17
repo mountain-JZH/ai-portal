@@ -161,6 +161,7 @@ onMounted(loadBanners)
           <thead>
             <tr>
               <th>标题</th>
+              <th>类型</th>
               <th>分类</th>
               <th>日期</th>
               <th>动作</th>
@@ -173,8 +174,9 @@ onMounted(loadBanners)
             <tr v-for="banner in banners" :key="banner.id">
               <td class="content-title-cell">
                 <strong>{{ banner.title }}</strong>
-                <small>{{ banner.description || '暂无描述' }}</small>
+                <small v-if="banner.bannerType !== 'image_only'">{{ banner.description || '暂无描述' }}</small>
               </td>
+              <td>{{ banner.bannerType === 'image_only' ? '纯图片头图' : '常规 Banner' }}</td>
               <td>{{ banner.category || '—' }}</td>
               <td>{{ banner.date || '—' }}</td>
               <td>

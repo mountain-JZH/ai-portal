@@ -82,12 +82,21 @@ def init_database():
                 image TEXT DEFAULT '',
                 action_type TEXT DEFAULT 'none',
                 action_target TEXT DEFAULT '',
+                banner_type TEXT NOT NULL DEFAULT 'standard',
                 sort_order INTEGER DEFAULT 0,
                 is_active INTEGER DEFAULT 1,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
+
+        banner_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(banners)")
+        }
+        if "banner_type" not in banner_columns:
+            connection.execute(
+                "ALTER TABLE banners ADD COLUMN banner_type TEXT NOT NULL DEFAULT 'standard'"
+            )
 
         connection.execute(
             """
