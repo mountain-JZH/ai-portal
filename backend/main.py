@@ -1,4 +1,5 @@
 import os
+import mimetypes
 
 import requests
 
@@ -16,12 +17,17 @@ from content_api import (
     banner_router,
 )
 from database import get_db_connection, init_database
+from exchange_api import router as exchange_router, admin_router as exchange_admin_router, ExchangeSubmissionGuard
 from news_api import (
     admin_router as news_admin_router,
     router as news_router,
 )
 from tools_api import admin_router as tools_admin_router, router as tools_router
 from upload_api import UPLOAD_ROOT, router as upload_router
+from section_visuals_api import (
+    admin_router as section_visuals_admin_router,
+    router as section_visuals_router,
+)
 
 
 load_dotenv()
@@ -41,6 +47,8 @@ init_database()
 app = FastAPI()
 
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+# Windows MIME registries may omit WebP; serve newly cropped images consistently.
+mimetypes.add_type("image/webp", ".webp")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 
 app.add_middleware(
@@ -62,6 +70,11 @@ app.include_router(announcement_admin_router)
 app.include_router(tools_router)
 app.include_router(tools_admin_router)
 app.include_router(upload_router)
+app.include_router(section_visuals_router)
+app.include_router(section_visuals_admin_router)
+app.include_router(exchange_router)
+app.include_router(exchange_admin_router)
+app.add_middleware(ExchangeSubmissionGuard)
 
 
 app.add_middleware(

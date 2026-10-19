@@ -118,6 +118,7 @@ def init_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 icon TEXT DEFAULT '',
                 title TEXT NOT NULL,
+                cover_image_url TEXT NOT NULL DEFAULT '',
                 description TEXT DEFAULT '',
                 status TEXT DEFAULT 'developing',
                 action_type TEXT DEFAULT 'none',
@@ -130,6 +131,14 @@ def init_database():
             """
         )
 
+        tool_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(tools)")
+        }
+        if "cover_image_url" not in tool_columns:
+            connection.execute(
+                "ALTER TABLE tools ADD COLUMN cover_image_url TEXT NOT NULL DEFAULT ''"
+            )
+
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS admins (
@@ -138,6 +147,45 @@ def init_database():
                 password_hash TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS section_visuals (
+                section_key TEXT PRIMARY KEY NOT NULL
+                    CHECK (section_key IN ('home_news', 'home_tools')),
+                image_path TEXT NOT NULL,
+                text_mode TEXT NOT NULL DEFAULT 'dark'
+                    CHECK (text_mode IN ('dark', 'light')),
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        section_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(section_visuals)")
+        }
+        if "text_mode" not in section_columns:
+            connection.execute(
+                "ALTER TABLE section_visuals ADD COLUMN text_mode TEXT NOT NULL "
+                "DEFAULT 'dark' CHECK (text_mode IN ('dark', 'light'))"
+            )
+
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS exchange_resources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                reason TEXT NOT NULL DEFAULT '',
+                domain TEXT NOT NULL,
+                resource_type TEXT NOT NULL,
+                tags TEXT NOT NULL DEFAULT '[]',
+                external_url TEXT NOT NULL DEFAULT '',
+                image_path TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
             )
             """
         )
