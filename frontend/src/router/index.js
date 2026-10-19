@@ -6,6 +6,7 @@ import AnnouncementAdminView from '../views/AnnouncementAdminView.vue'
 import AnnouncementFormView from '../views/AnnouncementFormView.vue'
 import BannerAdminView from '../views/BannerAdminView.vue'
 import BannerFormView from '../views/BannerFormView.vue'
+import SectionVisualsAdminView from '../views/SectionVisualsAdminView.vue'
 import DifyAssistantView from '../views/DifyAssistantView.vue'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -39,6 +40,11 @@ const router = createRouter({
       component: NewsDetailView,
     },
     {
+      path: '/exchange',
+      name: 'exchange',
+      component: () => import('../views/ExchangeView.vue'),
+    },
+    {
       path: '/tools',
       name: 'tools',
       component: ToolsView,
@@ -65,6 +71,11 @@ const router = createRouter({
       },
       children: [
         {
+          path: 'exchange',
+          name: 'exchange-admin',
+          component: () => import('../views/ExchangeAdminView.vue'),
+        },
+        {
           path: '',
           name: 'admin-dashboard',
           component: AdminDashboardView,
@@ -88,6 +99,11 @@ const router = createRouter({
           path: 'content/banners',
           name: 'banner-admin',
           component: BannerAdminView,
+        },
+        {
+          path: 'content/banners/sections',
+          name: 'section-visuals-admin',
+          component: SectionVisualsAdminView,
         },
         {
           path: 'content/banners/new',

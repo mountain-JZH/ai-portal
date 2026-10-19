@@ -19,6 +19,7 @@ import {
 import DeleteConfirm from './DeleteConfirm.vue'
 import QuadrantSymbol from './QuadrantSymbol.vue'
 import TodoStatusIcon from './TodoStatusIcon.vue'
+import ChevronRight from './ChevronRight.vue'
 
 const props = defineProps({
   plannerExpanded: {
@@ -443,7 +444,10 @@ onUnmounted(() => {
       :disabled="props.nodeDateSelectionMode.active"
       @click="emit('toggle-planner')"
     >
-      <span aria-hidden="true">{{ props.plannerExpanded ? '−' : '+' }}</span>
+      <svg class="planner-toggle-symbol" width="20" height="20" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path :d="props.plannerExpanded ? 'M5 12h14' : 'M5 12h14M12 5v14'" />
+      </svg>
     </button>
 
     <header class="work-card-header">
@@ -500,9 +504,9 @@ onUnmounted(() => {
         <div class="month-toolbar">
           <button class="today-button" type="button" @click="goToToday">今天</button>
           <div class="month-navigation">
-            <button type="button" aria-label="上一个月" @click="changeMonth(-1)">‹</button>
+            <button type="button" aria-label="上一个月" @click="changeMonth(-1)"><ChevronRight direction="left" :size="16" /></button>
             <strong aria-live="polite">{{ monthLabel }}</strong>
-            <button type="button" aria-label="下一个月" @click="changeMonth(1)">›</button>
+            <button type="button" aria-label="下一个月" @click="changeMonth(1)"><ChevronRight :size="16" /></button>
           </div>
         </div>
 
@@ -778,6 +782,8 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
+.planner-toggle-symbol { display: block; flex-shrink: 0; }
+
 .planner-toggle:focus {
   outline: none;
 }
@@ -902,6 +908,9 @@ onUnmounted(() => {
 }
 
 .today-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 26px;
   padding: 0 9px;
   border-radius: 8px;
@@ -920,15 +929,19 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 600;
   text-align: center;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .month-navigation button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
   width: 30px;
   height: 30px;
   padding: 0;
   border-radius: 50%;
-  font-size: 20px;
-  line-height: 20px;
 }
 
 .today-button:hover,
@@ -1581,5 +1594,114 @@ onUnmounted(() => {
   .todo-delete-confirm {
     min-width: 190px;
   }
+}
+/* Home V1.2 layout only; all calendar, todo and planner state stays above. */
+.work-calendar.home-workspace {
+  --workspace-padding: 20px;
+  --workspace-header-height: 36px;
+  --workspace-expand-size: 30px;
+  --color-surface: #fff;
+  --color-surface-soft: #f5f6f7;
+  --color-text: #22292c;
+  --color-text-secondary: #586165;
+  --color-muted: #697378;
+  --color-border: #e5e8e9;
+  --color-border-strong: #c9cfd2;
+  --color-primary: #22292c;
+  --color-primary-soft: #eceff0;
+  height: var(--home-slot-height, 464px);
+  padding: var(--workspace-padding);
+  background: var(--home-subtle, #f5f6f7);
+  font-family: var(--home-font, inherit);
+  box-shadow: none;
+}
+
+.home-workspace .work-card-header {
+  flex-shrink: 0;
+  min-height: var(--workspace-header-height);
+  padding-right: 40px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.home-workspace .view-tabs { padding: 0; gap: 20px; border: 0; border-radius: 0; background: transparent; }
+.home-workspace .view-tab {
+  height: 34px;
+  padding: 0 0 10px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 22px;
+  white-space: nowrap;
+}
+.home-workspace .view-tab.active {
+  border-bottom-color: var(--home-yellow, #f7b334);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.home-workspace .planner-toggle {
+  top: calc(var(--workspace-padding) + (var(--workspace-header-height) - var(--workspace-expand-size)) / 2);
+  right: var(--workspace-padding);
+  width: var(--workspace-expand-size);
+  height: var(--workspace-expand-size);
+  border: 0;
+  background: var(--home-green, #8dfc08);
+  color: var(--home-text, #22292c);
+  box-shadow: none;
+}
+.home-workspace .planner-toggle:hover { transform: none; background: #83e909; box-shadow: none; }
+
+.home-workspace .work-card-content {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  margin-top: 14px;
+  overflow: hidden;
+}
+.home-workspace .work-panel { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
+.home-workspace .work-panel.is-inactive { display: none; }
+.home-workspace .month-toolbar { flex-shrink: 0; }
+.home-workspace .calendar-main { flex: 0 0 auto; }
+.home-workspace .date-grid { min-height: 192px; grid-template-rows: repeat(6, 32px); flex: none; align-content: start; }
+.home-workspace .date-button { height: 32px; }
+.home-workspace .date-number { width: 27px; height: 27px; }
+.home-workspace .date-button.today .date-number { background: var(--color-text); }
+.home-workspace .date-button.today:not(.marked) .date-number { box-shadow: none; }
+.home-workspace .date-button:focus-visible .date-number { outline-color: var(--home-earth, #6d5b55); }
+
+.home-workspace .marker-editor { flex-shrink: 0; margin-top: 10px; }
+.home-workspace .marker-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 6px;
+}
+.home-workspace .marker-controls > input { width: 100%; height: 32px; }
+.home-workspace .primary-action,
+.home-workspace .secondary-action,
+.home-workspace .todo-add-row button { flex-shrink: 0; height: 32px; white-space: nowrap; font-size: 12px; }
+.home-workspace .primary-action,
+.home-workspace .todo-add-row button { background: var(--home-yellow, #f7b334); border-color: #d89520; color: var(--color-text); }
+.home-workspace .marker-controls > input:focus-visible,
+.home-workspace .todo-add-row input:focus-visible { border-color: var(--home-earth, #6d5b55); box-shadow: 0 0 0 2px rgb(109 91 85 / 12%); }
+.home-workspace button:not(.date-button):focus-visible { outline: 2px solid var(--home-earth, #6d5b55); outline-offset: 2px; box-shadow: none; }
+
+.home-workspace .todo-view { padding-top: 0; overflow: hidden; }
+.home-workspace .todo-heading,
+.home-workspace .todo-add-row,
+.home-workspace .todo-progress { flex-shrink: 0; }
+.home-workspace .todo-list { flex: 1; max-height: none; }
+.home-workspace .todo-progress { margin-top: 8px; line-height: 16px; }
+
+@media (max-width: 768px) {
+  .work-calendar.home-workspace { height: auto; }
+  .home-workspace .work-card-content { display: block; overflow: visible; }
+  .home-workspace .calendar-view { overflow: visible; }
+  .home-workspace .todo-list { flex: 0 1 auto; max-height: 320px; }
+  .home-workspace .todo-empty { min-height: 160px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-workspace *, .home-workspace *::before, .home-workspace *::after { transition: none; }
 }
 </style>

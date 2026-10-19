@@ -14,6 +14,7 @@ const isAnnouncementActive = computed(() =>
   route.path.startsWith('/admin/content/announcements'),
 )
 const isToolActive = computed(() => route.path.startsWith('/admin/tools'))
+const isExchangeActive = computed(() => route.path.startsWith('/admin/exchange'))
 
 async function handleLogout() {
   try {
@@ -95,6 +96,11 @@ async function handleLogout() {
             >
               工具管理
             </RouterLink>
+          </div>
+
+          <div class="admin-nav-group">
+            <span class="admin-nav-label">分享管理</span>
+            <RouterLink to="/admin/exchange" class="admin-nav-link admin-nav-child" :class="{ active: isExchangeActive }">互通有无管理</RouterLink>
           </div>
 
           <div class="admin-coming-soon" aria-label="后续管理能力">

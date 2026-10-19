@@ -1,13 +1,45 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 
 import HeroBanner from '../components/HeroBanner.vue'
 import NewsList from '../components/NewsList.vue'
 import PlannerExpandPanel from '../components/PlannerExpandPanel.vue'
 import ToolGrid from '../components/ToolGrid.vue'
 import WorkCalendar from '../components/WorkCalendar.vue'
+import { API_BASE_URL } from '../config/api'
+import { SECTION_VISUALS, resolveSectionImage } from '../config/sectionVisuals'
+import '../assets/homepage.css'
 
 const isPlannerExpanded = ref(false)
+const sectionImages = ref({})
+const sectionTextModes = ref({})
+const newsMastheadImage = SECTION_VISUALS[0].defaultImage
+const toolsMastheadImage = SECTION_VISUALS[1].defaultImage
+const route = useRoute()
+// Local visual acceptance only; these are not permanent tool cover assignments.
+const toolCardPreviewImages = computed(() =>
+  import.meta.env.DEV && route.query.toolCardPreview === '1'
+    ? [newsMastheadImage, toolsMastheadImage]
+    : [],
+)
+
+onMounted(async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/section-visuals`)
+    if (!response.ok) return
+    const data = await response.json()
+    if (!Array.isArray(data)) return
+    sectionImages.value = Object.fromEntries(SECTION_VISUALS.map(({ key }) => [
+      key, resolveSectionImage(data.find((item) => item?.sectionKey === key)?.image),
+    ]))
+    sectionTextModes.value = Object.fromEntries(SECTION_VISUALS.map(({ key }) => [
+      key, data.find((item) => item?.sectionKey === key)?.textMode === 'light' ? 'light' : 'dark',
+    ]))
+  } catch {
+    // The bundled mastheads remain available when configuration is unavailable.
+  }
+})
 const plannerSelectedDate = ref('')
 const draggingTodoId = ref('')
 const isMatrixModalOpen = ref(false)
@@ -70,11 +102,13 @@ function finishNodeDateSelection() {
 
     <section class="home-content-grid">
       <div class="home-main-column">
-        <NewsList class="home-news" />
+        <NewsList class="home-news" :masthead-image="sectionImages.home_news || newsMastheadImage"
+          :masthead-fallback-image="newsMastheadImage" :masthead-text-mode="sectionTextModes.home_news || 'dark'" />
       </div>
 
       <aside class="home-side-column">
         <WorkCalendar
+          class="home-workspace"
           :planner-expanded="isPlannerExpanded"
           :is-task-dragging="Boolean(draggingTodoId)"
           :is-planning-modal-open="isMatrixModalOpen"
@@ -106,7 +140,9 @@ function finishNodeDateSelection() {
       </div>
     </Transition>
 
-    <ToolGrid class="home-tools" />
+    <ToolGrid class="home-tools" home :masthead-image="sectionImages.home_tools || toolsMastheadImage"
+      :development-preview-images="toolCardPreviewImages"
+      :masthead-fallback-image="toolsMastheadImage" :masthead-text-mode="sectionTextModes.home_tools || 'dark'" />
   </main>
 </template>
 
@@ -131,11 +167,11 @@ function finishNodeDateSelection() {
 }
 
 .home-content-grid {
-  margin-top: 64px;
+  margin-top: 48px;
 
   display: grid;
   align-items: stretch;
-  gap: 24px;
+  gap: 40px;
   grid-template-columns: minmax(0, 2.2fr) minmax(310px, 0.9fr);
 }
 
@@ -147,13 +183,8 @@ function finishNodeDateSelection() {
   margin: 0;
 }
 
-:deep(.home-news),
-:deep(.work-calendar) {
-  height: 100%;
-}
-
 :deep(.home-tools) {
-  margin: 48px 0 96px;
+  margin: 48px 0 64px;
 }
 
 .home-planner-shell {
@@ -182,6 +213,11 @@ function finishNodeDateSelection() {
 }
 
 @media (max-width: 1024px) {
+  .home-content-grid {
+    gap: 24px;
+    grid-template-columns: minmax(0, 2.2fr) minmax(300px, 0.9fr);
+  }
+
   .home-planner-shell {
     margin-top: 24px;
   }
@@ -196,7 +232,7 @@ function finishNodeDateSelection() {
     align-items: start;
     grid-template-columns: minmax(0, 1fr);
     gap: 32px;
-    margin-top: 56px;
+    margin-top: 32px;
   }
 
   .home-main-column,
@@ -204,11 +240,7 @@ function finishNodeDateSelection() {
     display: block;
   }
 
-  :deep(.home-news),
-  :deep(.work-calendar) {
-    height: auto;
-  }
-
+  :deep(.home-tools) { margin-top: 32px; }
 }
 
 @media (max-width: 600px) {
@@ -219,11 +251,11 @@ function finishNodeDateSelection() {
 
   .home-content-grid {
     gap: 24px;
-    margin-top: 48px;
+    margin-top: 32px;
   }
 
   :deep(.home-tools) {
-    margin: 40px 0 72px;
+    margin: 32px 0 64px;
   }
 }
 </style>

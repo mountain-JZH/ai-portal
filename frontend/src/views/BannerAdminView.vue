@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
 import { adminFetch } from '../utils/adminAuth'
+import BannerManagementTabs from '../components/BannerManagementTabs.vue'
 
 const banners = ref([])
 const loading = ref(true)
@@ -122,6 +123,8 @@ onMounted(loadBanners)
         新增 Banner
       </RouterLink>
     </div>
+
+    <BannerManagementTabs />
 
     <div
       v-if="successMessage"

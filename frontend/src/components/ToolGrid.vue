@@ -3,8 +3,33 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import SectionMasthead from './SectionMasthead.vue'
+import ChevronRight from './ChevronRight.vue'
 
-defineProps({
+const props = defineProps({
+  home: {
+    type: Boolean,
+    default: false,
+  },
+  previewTool: { type: Object, default: null },
+  mastheadImage: {
+    type: String,
+    default: '',
+  },
+  mastheadFallbackImage: { type: String, default: '' },
+  mastheadTextMode: { type: String, default: 'dark' },
+  backgroundImages: {
+    type: Object,
+    default: () => ({}),
+  },
+  developmentPreviewImages: {
+    type: Array,
+    default: () => [],
+  },
+  featuredToolIds: {
+    type: Array,
+    default: () => [],
+  },
   detailed: {
     type: Boolean,
     default: false,
@@ -18,9 +43,10 @@ const statusLabels = {
 }
 
 const tools = ref([])
-const loading = ref(true)
+const loading = ref(!props.previewTool)
 const errorMessage = ref('')
 const placeholderCards = [1, 2, 3, 4, 5]
+const failedBackgrounds = ref({})
 
 function isSafeRoute(target) {
   return (
@@ -102,10 +128,28 @@ function resolveAction(tool) {
   return null
 }
 
-const toolCards = computed(() => tools.value.map((tool) => ({
+const previewImages = computed(() => import.meta.env.DEV && props.home ? props.developmentPreviewImages : [])
+function resolveToolCover(path) {
+  return typeof path === 'string' && path.startsWith('/uploads/tools/') ? `${API_BASE_URL}${path}` : ''
+}
+
+const toolCards = computed(() => (props.previewTool ? [props.previewTool] : tools.value).map((tool, index) => ({
   ...tool,
   action: resolveAction(tool),
+  backgroundImage: resolveToolCover(tool.coverImageUrl) || props.backgroundImages[tool.id] || previewImages.value[index] || '',
 })))
+const visibleToolCards = computed(() => props.home ? toolCards.value.slice(0, 4) : toolCards.value)
+
+function backgroundState(tool) {
+  if (!tool.backgroundImage) return 'unconfigured'
+  return failedBackgrounds.value[tool.id] === tool.backgroundImage ? 'error' : 'configured'
+}
+
+const previewFailures = computed(() => visibleToolCards.value
+  .filter((tool) => backgroundState(tool) === 'error')
+  .map((tool) => `${tool.title}（ID ${tool.id}）`))
+const previewUnconfigured = computed(() => visibleToolCards.value
+  .filter((tool) => backgroundState(tool) === 'unconfigured').length)
 
 async function loadTools() {
   loading.value = true
@@ -127,20 +171,38 @@ async function loadTools() {
   }
 }
 
-onMounted(loadTools)
+onMounted(() => { if (!props.previewTool) loadTools() })
 </script>
 
 <template>
   <section
     class="section"
-    :class="{ 'section--detailed': detailed }"
+    :class="{ 'section--detailed': detailed, 'section--home': home, 'section--preview': Boolean(previewTool) }"
   >
-    <div class="section-header">
+    <SectionMasthead
+      v-if="home && !previewTool"
+      title="AI 与常用工具"
+      description="让智能工具更自然地融入日常工作"
+      to="/tools"
+      :image="mastheadImage"
+      :fallback-image="mastheadFallbackImage"
+      :text-mode="mastheadTextMode"
+      navigation-label="全部"
+      navigation-aria-label="查看全部工具"
+    />
+    <div v-else-if="!previewTool" class="section-header">
       <div>
         <h2>AI 与常用工具</h2>
         <p>将日常工具集中在一个入口</p>
       </div>
     </div>
+
+    <p v-if="previewImages.length" class="tool-preview-notice" role="status">
+      本地工具卡图片预览：前两项借用栏目素材，仅用于渐隐验收，非正式工具封面。
+      未配置图片：{{ previewUnconfigured }} 项。
+      <span v-if="previewFailures.length">已配置但加载失败：{{ previewFailures.join('、') }}。</span>
+      <span v-else>当前未报告图片加载失败。</span>
+    </p>
 
     <div
       class="tool-grid"
@@ -149,12 +211,12 @@ onMounted(loadTools)
     >
       <template v-if="loading">
         <article
-          v-for="placeholder in placeholderCards"
+          v-for="placeholder in home ? placeholderCards.slice(0, 4) : placeholderCards"
           :key="placeholder"
           class="tool-card tool-card--loading"
           aria-hidden="true"
         >
-          <span class="tool-loading-icon" />
+          <span v-if="!home" class="tool-loading-icon" />
           <span class="tool-loading-title" />
           <span class="tool-loading-line" />
           <span class="tool-loading-line tool-loading-line--short" />
@@ -176,17 +238,32 @@ onMounted(loadTools)
 
       <component
         v-else
-        :is="!detailed && tool.action ? tool.action.component : 'article'"
-        v-for="tool in toolCards"
+        :is="!detailed && tool.action && !previewTool ? tool.action.component : 'article'"
+        v-for="tool in visibleToolCards"
         :key="tool.id"
-        v-bind="!detailed && tool.action ? tool.action.attributes : {}"
+        v-bind="!detailed && tool.action && !previewTool ? tool.action.attributes : {}"
         class="tool-card"
+        :data-background-state="home ? backgroundState(tool) : undefined"
         :class="{
-          'tool-card-link': !detailed && tool.action,
+          'tool-card-link': !detailed && tool.action && !previewTool,
           [`tool-card--${tool.status}`]: true,
+          'tool-card--featured': home && featuredToolIds.includes(tool.id),
+          'tool-card--with-background': home && tool.backgroundImage && failedBackgrounds[tool.id] !== tool.backgroundImage,
         }"
+        :aria-disabled="home && !tool.action ? 'true' : undefined"
+        :aria-label="home && tool.action
+          ? tool.title + (tool.action.attributes.target ? '（新标签页打开）' : '')
+          : undefined"
       >
-        <div class="tool-top">
+        <img
+          v-if="home && tool.backgroundImage && failedBackgrounds[tool.id] !== tool.backgroundImage"
+          class="tool-background"
+          :src="tool.backgroundImage"
+          alt=""
+          aria-hidden="true"
+          @error="failedBackgrounds[tool.id] = tool.backgroundImage"
+        >
+        <div v-if="!home" class="tool-top">
           <div class="tool-icon">
             {{ tool.icon }}
           </div>
@@ -200,16 +277,23 @@ onMounted(loadTools)
           </span>
         </div>
 
-        <h3>
-          {{ tool.title }}
-        </h3>
-
-        <p>
-          {{ tool.description }}
-        </p>
+        <div v-if="home" class="tool-home-content">
+          <div class="tool-home-copy">
+            <h3>{{ tool.title }}</h3>
+            <p>{{ tool.description }}</p>
+          </div>
+          <span v-if="tool.action" class="tool-home-navigation" aria-hidden="true">
+            <span class="tool-home-action-label">启动</span><ChevronRight class="tool-surface-arrow" />
+          </span>
+          <span v-else class="tool-home-unavailable">敬请期待</span>
+        </div>
+        <template v-else>
+          <h3>{{ tool.title }}</h3>
+          <p>{{ tool.description }}</p>
+        </template>
 
         <div
-          v-if="detailed"
+          v-if="detailed && !home"
           class="tool-footer"
         >
           <span
@@ -553,5 +637,237 @@ onMounted(loadTools)
     grid-template-columns:
       1fr;
   }
+}
+
+/* Home-only surface variant. The detailed /tools presentation stays unchanged. */
+.section--home {
+  width: 100%;
+  margin: 0;
+  font-family: var(--home-font, inherit);
+  color: var(--home-text, #22292c);
+}
+
+.section--home .tool-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.section--home.section--preview .tool-grid {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 0;
+}
+
+.section--home .tool-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid var(--home-border, #e5e8e9);
+  border-radius: var(--home-radius, 12px);
+  background: var(--home-surface, #fff);
+  box-shadow: var(--tool-inset-shadow, 0 0 0 0 transparent);
+  transition: border-color var(--home-motion, 220ms) var(--home-ease, ease),
+    background-color var(--home-motion, 220ms) var(--home-ease, ease),
+    transform var(--home-motion, 220ms) var(--home-ease, ease),
+    box-shadow var(--home-motion, 220ms) var(--home-ease, ease);
+}
+
+.tool-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 100%;
+  /* Reserve the two-line copy and navigation before allocating image space. */
+  height: min(65%, calc(100% - 144px));
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.section--home .tool-card--with-background::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: min(65%, calc(100% - 144px));
+  z-index: 0;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0) calc(100% - 40px), var(--home-surface, #fff));
+  pointer-events: none;
+}
+
+.section--home .tool-card:not(.tool-card--with-background)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: min(65%, calc(100% - 144px));
+  background: linear-gradient(to bottom, #f5f6f7, #edf0ef calc(100% - 40px), var(--home-surface, #fff));
+  pointer-events: none;
+}
+
+.tool-preview-notice {
+  margin: 16px 0 0;
+  color: var(--home-earth, #6d5b55);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@supports (mask-image: linear-gradient(#000, transparent)) or (-webkit-mask-image: linear-gradient(#000, transparent)) {
+  .tool-background {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  }
+
+  .section--home .tool-card--with-background::after { display: none; }
+}
+
+.section--home .tool-card--featured {
+  --tool-inset-shadow: inset 0 0 0 1px var(--home-yellow, #f7b334);
+  border-color: var(--home-yellow, #f7b334);
+}
+
+.section--home .tool-card[aria-disabled="true"] { cursor: default; }
+
+.tool-home-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+.tool-home-copy {
+  display: grid;
+  grid-template-rows: 48.6px 43.4px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.section--home .tool-card h3 {
+  align-self: end;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--home-text, #22292c);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.section--home .tool-card p {
+  align-self: start;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--home-secondary, #586165);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.tool-home-navigation,
+.tool-home-unavailable {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--home-text, #22292c);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.tool-home-unavailable { color: var(--home-muted, #697378); font-size: 12px; font-weight: 400; }
+
+.tool-home-action-label {
+  position: relative;
+  isolation: isolate;
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--home-text, #22292c);
+}
+
+.tool-home-action-label::before {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(transparent 45%, var(--home-green, #8dfc08) 45%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.tool-surface-arrow {
+  display: block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  color: var(--home-text, #22292c);
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .8;
+  pointer-events: none;
+  transition: transform var(--home-motion, 220ms) var(--home-ease, ease);
+}
+
+.section--home .tool-card-link:hover {
+  transform: translateY(-2px);
+  border-color: #9fa9ad;
+  box-shadow: var(--tool-inset-shadow, 0 0 0 0 transparent), 0 8px 22px rgb(34 41 44 / 9%);
+}
+.section--home .tool-card--featured.tool-card-link:hover { border-color: var(--home-yellow, #f7b334); }
+.section--home .tool-card-link:active { transform: translateY(0); background-color: #f5f6f7; }
+.section--home .tool-card-link:focus-visible { outline: 2px solid var(--home-earth, #6d5b55); outline-offset: 3px; }
+.tool-card-link:hover .tool-surface-arrow,
+.tool-card-link:focus-visible .tool-surface-arrow { transform: translateX(3px); opacity: 1; }
+
+.section--home .tool-state {
+  min-height: 200px;
+  border-color: var(--home-border, #e5e8e9);
+  color: var(--home-muted, #697378);
+  background: var(--home-surface, #fff);
+}
+.section--home .tool-state--error { color: #a23e3e; }
+.section--home .tool-loading-title { margin-top: 0; }
+
+@media (max-width: 1050px) {
+  .section--home .tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .section--home { width: 100%; margin: 0; }
+  .section--home .tool-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section--home .tool-card, .tool-surface-arrow { transition: none; }
+  .section--home .tool-card-link:hover,
+  .section--home .tool-card-link:active { transform: none; }
+  .tool-card-link:hover .tool-surface-arrow,
+  .tool-card-link:focus-visible .tool-surface-arrow { transform: none; }
 }
 </style>

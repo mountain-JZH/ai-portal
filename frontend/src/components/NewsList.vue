@@ -3,6 +3,14 @@ import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import SectionMasthead from './SectionMasthead.vue'
+import ChevronRight from './ChevronRight.vue'
+
+defineProps({
+  mastheadImage: { type: String, default: '' },
+  mastheadFallbackImage: { type: String, default: '' },
+  mastheadTextMode: { type: String, default: 'dark' },
+})
 
 const latestNews = ref([])
 const loading = ref(true)
@@ -49,240 +57,192 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="section">
-    <div class="section-header">
-      <div>
-        <h2>最新动态</h2>
-        <p>关注内部通知、信息宣贯及行业动态</p>
+  <section class="home-news-section" aria-label="最新动态">
+    <SectionMasthead
+      title="最新动态"
+      description="关注内部通知、信息宣贯及行业动态"
+      to="/news"
+      :image="mastheadImage"
+      :fallback-image="mastheadFallbackImage"
+      :text-mode="mastheadTextMode"
+      navigation-label="全部"
+      navigation-aria-label="查看全部新闻"
+    />
+
+    <div class="news-body" :aria-busy="loading">
+      <div v-if="loading" class="status-message" role="status">
+        正在加载最新动态...
       </div>
-
-      <RouterLink to="/news">
-        查看全部 →
-      </RouterLink>
-    </div>
-
-    <!-- 加载中 -->
-    <div
-      v-if="loading"
-      class="status-message"
-    >
-      正在加载最新动态...
-    </div>
-
-    <!-- 加载失败 -->
-    <div
-      v-else-if="errorMessage"
-      class="status-message error-message"
-    >
-      {{ errorMessage }}
-    </div>
-
-    <!-- 没有新闻 -->
-    <div
-      v-else-if="latestNews.length === 0"
-      class="status-message"
-    >
-      暂无新闻
-    </div>
-
-    <!-- 正常新闻列表 -->
-    <div
-      v-else
-      class="news-list"
-    >
-      <RouterLink
-        v-for="news in latestNews"
-        :key="news.id"
-        :to="`/news/${news.id}`"
-        class="news-item"
-      >
-        <div class="news-content">
-          <div class="news-main">
-            <span class="news-type">
-              {{ news.type }}
-            </span>
-
-            <span class="news-title">
-              {{ news.title }}
-            </span>
-          </div>
-
-          <p class="news-summary">
-            {{ news.summary }}
-          </p>
-        </div>
-
-        <time
-          class="news-date"
-          :datetime="news.date"
+      <div v-else-if="errorMessage" class="status-message error-message" role="alert">
+        {{ errorMessage }}
+      </div>
+      <div v-else-if="latestNews.length === 0" class="status-message" role="status">
+        暂无新闻
+      </div>
+      <div v-else class="news-list">
+        <RouterLink
+          v-for="news in latestNews"
+          :key="news.id"
+          :to="`/news/${news.id}`"
+          class="news-item"
+          :aria-label="news.title"
         >
-          {{ news.date }}
-        </time>
-      </RouterLink>
+          <div class="news-meta">
+            <span class="news-type">{{ news.type }}</span>
+            <time class="news-date" :datetime="news.date">{{ news.date }}</time>
+          </div>
+          <div class="news-content">
+            <h3 class="news-title">{{ news.title }}</h3>
+            <p class="news-summary">{{ news.summary }}</p>
+          </div>
+          <ChevronRight class="news-arrow" />
+        </RouterLink>
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.section {
-  width: calc(100% - 48px);
-  max-width: 1200px;
-  margin: 72px auto;
-  padding: 22px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-soft);
+.home-news-section {
+  --masthead-inline-padding: 32px;
+  --masthead-navigation-slot: 28px;
+  width: 100%;
+  min-width: 0;
+  height: var(--home-slot-height, 464px);
+  display: grid;
+  grid-template-rows: var(--home-masthead-height, 128px) minmax(0, 1fr);
+  font-family: var(--home-font, inherit);
+  color: var(--home-text, #22292c);
 }
 
-.section-header {
-  margin-bottom: 24px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-}
-
-.section-header h2 {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.3;
-  color: var(--color-text);
-}
-
-.section-header p {
-  margin: 8px 0 0;
-  color: var(--color-muted);
-  font-size: 14px;
-}
-
-.section-header a {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  font-size: 14px;
-  transition: color var(--transition-fast);
-}
-
-.section-header a:hover {
-  color: var(--color-primary);
-}
-
-.status-message {
-  padding: 28px 12px;
-  border-top: 1px solid var(--color-border);
-  color: var(--color-muted);
-  font-size: 14px;
-  text-align: center;
-}
-
-.error-message {
-  color: #b45353;
+.news-body {
+  min-width: 0;
+  height: calc(var(--home-news-row-height, 112px) * 3);
 }
 
 .news-list {
-  border-top: 1px solid var(--color-border);
+  display: grid;
+  grid-template-rows: repeat(3, var(--home-news-row-height, 112px));
+  height: 100%;
 }
 
-.news-item {
-  min-height: 104px;
-  padding: 16px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-bottom: 1px solid var(--color-border);
-  color: inherit;
-  text-decoration: none;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.news-content {
-  min-width: 0;
-  flex: 1;
-}
-
-.news-item:hover {
-  background: var(--color-surface-soft);
-  color: var(--color-primary);
-}
-
-.news-main {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.news-type {
-  min-width: 64px;
-  padding: 5px 10px;
-  border-radius: var(--radius-xs);
-  background: var(--color-primary-soft);
-  color: #6266a6;
-  font-size: 12px;
-  font-weight: 600;
+.status-message {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+  color: var(--home-muted, #697378);
+  font-size: 14px;
   text-align: center;
 }
 
-.news-title {
-  color: var(--color-text-secondary);
-  font-weight: 500;
+.error-message { color: #a23e3e; }
+
+.news-item {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) var(--masthead-navigation-slot);
+  align-items: center;
+  gap: 16px;
+  height: var(--home-news-row-height, 112px);
+  min-width: 0;
+  padding: 10px 20px;
+  padding-right: var(--masthead-inline-padding);
+  overflow: hidden;
+  border-bottom: 1px solid var(--home-border, #e5e8e9);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--home-motion, 220ms) var(--home-ease, ease);
 }
 
-.news-summary {
-  margin: 8px 0 0 84px;
+.news-item:last-child { border-bottom: 0; }
+
+.news-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.news-type {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  color: var(--color-muted);
-  font-size: 13px;
-  line-height: 1.6;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  color: var(--home-earth, #6d5b55);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .news-date {
-  flex-shrink: 0;
-  color: var(--color-muted);
-  font-size: 13px;
+  color: var(--home-muted, #697378);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
-@media (max-width: 600px) {
-  .section {
-    width: calc(100% - 32px);
-    margin: 56px auto;
-    padding: 16px;
-  }
+.news-content { min-width: 0; }
 
-  .section-header {
-    align-items: flex-end;
-    gap: 16px;
-  }
+.news-title,
+.news-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
 
-  .news-item {
-    padding: 16px 10px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
-  }
+.news-title {
+  margin: 0;
+  color: var(--home-text, #22292c);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 21px;
+}
 
-  .news-main {
-    width: 100%;
-    align-items: flex-start;
-    gap: 12px;
-  }
+.news-summary {
+  margin: 5px 0 0;
+  color: var(--home-secondary, #586165);
+  font-size: 13px;
+  line-height: 20px;
+}
 
-  .news-summary {
-    margin-left: 0;
-    white-space: normal;
-  }
+.news-arrow {
+  justify-self: center;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .8;
+  pointer-events: none;
+  transition: transform var(--home-motion, 220ms) var(--home-ease, ease);
+}
 
-  .news-title {
-    min-width: 0;
-    line-height: 1.6;
-  }
+.news-item:hover { background: var(--home-subtle, #f5f6f7); }
+.news-item:hover .news-title { color: #394348; }
+.news-item:active { background: #eceff0; }
+.news-item:focus-visible { outline: 2px solid var(--home-earth, #6d5b55); outline-offset: -3px; }
+.news-item:hover .news-arrow,
+.news-item:focus-visible .news-arrow { transform: translateX(3px); opacity: 1; }
 
-  .news-date {
-    align-self: flex-end;
-  }
+@media (max-width: 768px) {
+  .home-news-section { height: auto; grid-template-rows: auto minmax(0, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .home-news-section { --masthead-inline-padding: 20px; }
+  .news-item { gap: 10px; padding-left: 4px; }
+  .news-title { font-size: 14px; line-height: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .news-item, .news-arrow { transition: none; }
+  .news-item:hover .news-arrow,
+  .news-item:focus-visible .news-arrow { transform: none; }
 }
 </style>
