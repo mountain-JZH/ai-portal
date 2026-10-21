@@ -43,13 +43,17 @@ class ToolImageTest(unittest.TestCase):
         cls.tool_patch = patch.object(tools_api, "UPLOAD_ROOT", cls.root / "uploads")
         cls.tool_patch.start()
         cls.database, cls.tools_api, cls.app = database, tools_api, main.app
-        status, headers, _ = cls.request("POST", "/api/auth/login", json.dumps({
+        from auth_support import employee_session
+        cls.employee_cookie, cls.csrf = employee_session(cls.app, call_app)
+        status, headers, login_result = cls.request("POST", "/api/auth/login", json.dumps({
             "username": "tool-test-admin", "password": "tool-test-password",
         }).encode(), {"content-type": "application/json"})
         assert status == 200
         cookies = SimpleCookie()
-        cookies.load(headers[b"set-cookie"].decode())
+        cookies.load(headers.get(b"set-cookie", cls.employee_cookie.encode()).decode())
         cls.cookie = "; ".join(f"{key}={value.value}" for key, value in cookies.items())
+        cls.admin_csrf = json.loads(login_result)['csrfToken']
+        cls.employee_cookie, cls.csrf = employee_session(cls.app, call_app)
 
     @classmethod
     def tearDownClass(cls):
@@ -61,9 +65,10 @@ class ToolImageTest(unittest.TestCase):
 
     @classmethod
     def request(cls, method, path, body=b"", headers=None, admin=False):
-        headers = dict(headers or {})
+        headers = {"cookie": cls.employee_cookie, "x-csrf-token": cls.csrf, **(headers or {})}
         if admin:
             headers["cookie"] = cls.cookie
+            headers["x-csrf-token"] = cls.admin_csrf
         return asyncio.run(call_app(cls.app, method, path, body, headers))
 
     def setUp(self):
@@ -92,11 +97,11 @@ class ToolImageTest(unittest.TestCase):
         return json.loads(body)
 
     def test_real_auth_rejects_anonymous_and_inactive_admin(self):
-        self.assertEqual(self.editor(content=image_bytes(), admin=False)[0], 401)
+        self.assertEqual(self.editor(content=image_bytes(), admin=False)[0], 403)
         self.assertEqual(self.request("GET", "/api/tools")[2], b"[]")
         first = self.create()
-        self.assertEqual(self.editor(first["id"], content=image_bytes(), admin=False)[0], 401)
-        self.assertEqual(self.editor(first["id"], payload={"title": "x", "removeImage": True}, admin=False)[0], 401)
+        self.assertEqual(self.editor(first["id"], content=image_bytes(), admin=False)[0], 403)
+        self.assertEqual(self.editor(first["id"], payload={"title": "x", "removeImage": True}, admin=False)[0], 403)
         with closing(self.database.get_db_connection()) as connection, connection:
             connection.execute("UPDATE admins SET is_active=0")
         try:

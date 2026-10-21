@@ -81,13 +81,17 @@ class ExchangeTest(unittest.TestCase):
         cls.api_upload = patch.object(exchange_api, "UPLOAD_ROOT", cls.root / "uploads")
         cls.api_upload.start()
         cls.database, cls.api, cls.app = database, exchange_api, main.app
-        status, headers, _ = cls.request("POST", "/api/auth/login", json.dumps({
+        from auth_support import employee_session
+        cls.employee_cookie, cls.csrf = employee_session(cls.app, call)
+        status, headers, login_result = cls.request("POST", "/api/auth/login", json.dumps({
             "username": "exchange-test-admin", "password": "exchange-test-password",
         }).encode(), {"content-type": "application/json"})
         assert status == 200
         cookie = SimpleCookie()
-        cookie.load(headers[b"set-cookie"].decode())
+        cookie.load(headers.get(b"set-cookie", cls.employee_cookie.encode()).decode())
         cls.cookie = "; ".join(f"{key}={value.value}" for key, value in cookie.items())
+        cls.admin_csrf = json.loads(login_result)['csrfToken']
+        cls.employee_cookie, cls.csrf = employee_session(cls.app, call)
 
     @classmethod
     def tearDownClass(cls):
@@ -99,9 +103,10 @@ class ExchangeTest(unittest.TestCase):
 
     @classmethod
     def request(cls, method, path, body=b"", headers=None, admin=False):
-        headers = dict(headers or {})
+        headers = {"cookie": cls.employee_cookie, "x-csrf-token": cls.csrf, **(headers or {})}
         if admin:
             headers["cookie"] = cls.cookie
+            headers["x-csrf-token"] = cls.admin_csrf
         return asyncio.run(call(cls.app, method, path, body, headers))
 
     def setUp(self):
@@ -194,7 +199,7 @@ class ExchangeTest(unittest.TestCase):
         first_path = self.root / first["imageUrl"].lstrip("/")
         other_path = self.root / other["imageUrl"].lstrip("/")
         for method, path in [("GET", "/api/admin/exchange"), ("GET", f"/api/admin/exchange/{first['id']}"), ("DELETE", f"/api/admin/exchange/{first['id']}")]:
-            self.assertEqual(self.request(method, path)[0], 401)
+            self.assertEqual(self.request(method, path)[0], 403)
         listing = json.loads(self.request("GET", "/api/admin/exchange?limit=1&offset=0", admin=True)[2])
         self.assertEqual(listing["total"], 2)
         self.assertEqual(listing["items"], [other])
@@ -315,27 +320,34 @@ class ExchangeTest(unittest.TestCase):
         thread = Thread(target=lambda: server.run(sockets=[sock]), daemon=True)
         thread.start()
         origin = f"http://127.0.0.1:{port}"
+        visitor = requests.Session()
         try:
             deadline = monotonic() + 5
             while not server.started and monotonic() < deadline:
                 sleep(.02)
             self.assertTrue(server.started)
-            response = requests.post(origin + "/api/exchange", data={"payload": json.dumps(self.fields())},
+            from auth_support import http_employee_login
+            http_employee_login(visitor, origin)
+            response = visitor.post(origin + "/api/exchange", data={"payload": json.dumps(self.fields())},
                                      files={"file": ("untrusted-name.webp", image_bytes(), "image/webp")}, timeout=5)
             self.assertEqual(response.status_code, 201, response.text)
             resource = response.json()
-            self.assertIn(resource, requests.get(origin + "/api/exchange", timeout=5).json())
-            self.assertEqual(requests.get(origin + resource["imageUrl"], timeout=5).status_code, 200)
+            self.assertIn(resource, visitor.get(origin + "/api/exchange", timeout=5).json())
+            self.assertEqual(visitor.get(origin + resource["imageUrl"], timeout=5).status_code, 200)
             with closing(sqlite3.connect(self.root / "test.db")) as connection:
                 self.assertEqual(connection.execute("SELECT title FROM exchange_resources WHERE id=?", (resource["id"],)).fetchone()[0], resource["title"])
             self.assertEqual(requests.delete(origin + f"/api/admin/exchange/{resource['id']}", timeout=5).status_code, 401)
             with requests.Session() as admin:
-                self.assertEqual(admin.post(origin + "/api/auth/login", json={"username": "exchange-test-admin", "password": "exchange-test-password"}, timeout=5).status_code, 200)
+                http_employee_login(admin, origin)
+                login = admin.post(origin + "/api/auth/login", json={"username": "exchange-test-admin", "password": "exchange-test-password"}, timeout=5)
+                self.assertEqual(login.status_code, 200)
+                admin.headers['X-CSRF-Token'] = login.json()['csrfToken']
                 self.assertEqual(admin.get(origin + f"/api/admin/exchange/{resource['id']}", timeout=5).json(), resource)
                 self.assertEqual(admin.delete(origin + f"/api/admin/exchange/{resource['id']}", timeout=5).status_code, 200)
-            self.assertEqual(requests.get(origin + "/api/exchange", timeout=5).json(), [])
-            self.assertEqual(requests.get(origin + resource["imageUrl"], timeout=5).status_code, 404)
+            self.assertEqual(visitor.get(origin + "/api/exchange", timeout=5).json(), [])
+            self.assertEqual(visitor.get(origin + resource["imageUrl"], timeout=5).status_code, 404)
         finally:
+            visitor.close()
             server.should_exit = True
             thread.join(timeout=5)
             sock.close()
@@ -344,7 +356,7 @@ class ExchangeTest(unittest.TestCase):
     def test_existing_news_endpoints_keep_their_auth_and_payload(self):
         data = {"title": "独立测试新闻", "content": "news content", "is_published": 1}
         headers = {"content-type": "application/json"}
-        self.assertEqual(self.request("POST", "/api/news", json.dumps(data).encode(), headers)[0], 401)
+        self.assertEqual(self.request("POST", "/api/news", json.dumps(data).encode(), headers)[0], 403)
         status, _, body = self.request("POST", "/api/news", json.dumps(data).encode(), headers, True)
         self.assertEqual(status, 201)
         news = json.loads(body)

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from auth_security import hash_password
 from dotenv import load_dotenv
+from project_data import init_project_tables
 
 
 # backend 文件夹路径
@@ -189,6 +190,44 @@ def init_database():
             )
             """
         )
+
+        connection.executescript("""
+            CREATE TABLE IF NOT EXISTS employees (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                name TEXT NOT NULL,
+                department TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+                can_edit_projects INTEGER NOT NULL DEFAULT 0 CHECK(can_edit_projects IN (0,1)),
+                must_change_password INTEGER NOT NULL DEFAULT 1 CHECK(must_change_password IN (0,1)),
+                auth_version INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                last_login_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS employee_sessions (
+                token_hash TEXT PRIMARY KEY,
+                employee_id INTEGER NOT NULL REFERENCES employees(id),
+                auth_version INTEGER NOT NULL,
+                expires_at REAL NOT NULL,
+                admin_id INTEGER REFERENCES admins(id),
+                admin_expires_at REAL
+            );
+            CREATE INDEX IF NOT EXISTS employee_sessions_employee ON employee_sessions(employee_id);
+            CREATE TABLE IF NOT EXISTS auth_login_attempts (
+                bucket TEXT PRIMARY KEY,
+                window_start INTEGER NOT NULL,
+                attempts INTEGER NOT NULL
+            );
+        """)
+
+        init_project_tables(connection)
+
+        # Preserve both identity tables and IDs; never infer admin status from a username.
+        employee_columns = {row['name'] for row in connection.execute('PRAGMA table_info(employees)')}
+        if 'admin_id' not in employee_columns:
+            connection.execute('ALTER TABLE employees ADD COLUMN admin_id INTEGER REFERENCES admins(id)')
+        connection.execute('CREATE UNIQUE INDEX IF NOT EXISTS employee_admin_identity ON employees(admin_id) WHERE admin_id IS NOT NULL')
 
         admin_count = connection.execute(
             "SELECT COUNT(*) FROM admins"

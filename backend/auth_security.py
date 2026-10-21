@@ -6,7 +6,7 @@ _password_hasher = PasswordHasher()
 
 
 def hash_password(password: str) -> str:
-    """Hash an administrator password with Argon2id."""
+    """Hash an employee or administrator password with Argon2id."""
 
     return _password_hasher.hash(password)
 

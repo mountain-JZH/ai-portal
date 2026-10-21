@@ -83,13 +83,17 @@ class SectionVisualsTest(unittest.TestCase):
         cls.section_upload_patch.start()
         cls.app = main.app
         cls.database = database
-        status, headers, _ = cls.request("POST", "/api/auth/login", body=json.dumps({
+        from auth_support import employee_session
+        cls.employee_cookie, cls.csrf = employee_session(cls.app, call_app)
+        status, headers, login_result = cls.request("POST", "/api/auth/login", body=json.dumps({
             "username": "section-test-admin", "password": "section-test-password",
         }).encode(), headers={"content-type": "application/json"})
         assert status == 200, status
         cookie = SimpleCookie()
-        cookie.load(headers[b"set-cookie"].decode())
+        cookie.load(headers.get(b"set-cookie", cls.employee_cookie.encode()).decode())
         cls.cookie = "; ".join(f"{key}={value.value}" for key, value in cookie.items())
+        cls.admin_csrf = json.loads(login_result)['csrfToken']
+        cls.employee_cookie, cls.csrf = employee_session(cls.app, call_app)
 
     @classmethod
     def tearDownClass(cls):
@@ -101,9 +105,10 @@ class SectionVisualsTest(unittest.TestCase):
 
     @classmethod
     def request(cls, method, path, body=b"", headers=None, admin=False):
-        merged = dict(headers or {})
+        merged = {"cookie": cls.employee_cookie, "x-csrf-token": cls.csrf, **(headers or {})}
         if admin:
             merged["cookie"] = cls.cookie
+            merged["x-csrf-token"] = cls.admin_csrf
         return asyncio.run(call_app(cls.app, method, path, body, merged))
 
     def upload(self, content=None, mime="image/webp", key="home_news", admin=True, text_mode=None):
@@ -147,7 +152,7 @@ class SectionVisualsTest(unittest.TestCase):
     def test_color_validation_auth_and_failed_save(self):
         self.upload(text_mode="light")
         before = self.request("GET", "/api/section-visuals")[2]
-        self.assertEqual(self.update_mode(admin=False)[0], 401)
+        self.assertEqual(self.update_mode(admin=False)[0], 403)
         self.assertEqual(self.update_mode(key="unknown")[0], 400)
         for invalid in ["blue", "", None, 1, ["light"]]:
             self.assertEqual(self.update_mode(mode=invalid)[0], 422)
@@ -179,7 +184,9 @@ class SectionVisualsTest(unittest.TestCase):
         with patch.object(self.database, "DATABASE_PATH", legacy):
             self.database.init_database()
             self.database.init_database()
-            row = json.loads(self.request("GET", "/api/section-visuals")[2])[0]
+            from auth_support import employee_session
+            cookie, csrf = employee_session(self.app, call_app)
+            row = json.loads(self.request("GET", "/api/section-visuals", headers={"cookie": cookie, "x-csrf-token": csrf})[2])[0]
             self.assertEqual(row["textMode"], "dark")
             self.assertEqual(row["image"], "/uploads/sections/old.webp")
             self.assertEqual(row["updatedAt"], "2026-01-01")
@@ -212,8 +219,8 @@ class SectionVisualsTest(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_authentication(self):
-        self.assertEqual(self.upload(admin=False)[0], 401)
-        self.assertEqual(self.request("GET", "/api/admin/section-visuals")[0], 401)
+        self.assertEqual(self.upload(admin=False)[0], 403)
+        self.assertEqual(self.request("GET", "/api/admin/section-visuals")[0], 403)
         self.assertEqual(self.request("GET", "/api/admin/section-visuals", admin=True)[0], 200)
         with closing(self.database.get_db_connection()) as connection, connection:
             connection.execute("UPDATE admins SET is_active=0 WHERE username='section-test-admin'")
@@ -318,7 +325,7 @@ class SectionVisualsTest(unittest.TestCase):
     def test_banner_endpoints_still_available(self):
         self.assertEqual(self.request("GET", "/api/banners")[0], 200)
         self.assertEqual(self.request("GET", "/api/admin/banners", admin=True)[0], 200)
-        self.assertEqual(self.request("GET", "/api/admin/banners")[0], 401)
+        self.assertEqual(self.request("GET", "/api/admin/banners")[0], 403)
 
 
 if __name__ == "__main__":
