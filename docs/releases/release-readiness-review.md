@@ -1,4 +1,6 @@
-# AI Portal V1.8 发布准备审查
+# AI Portal V1.8 发布准备审查（历史记录）
+
+> 本文主体保留 2026-10-19 的历史观察与计数，不是当前发布指令或放行结论。2026-10-21 当前流程以 [DEPLOYMENT.md](../../DEPLOYMENT.md)、[当前验收清单](release-acceptance-checklist.md)、[精确拟暂存清单](git-staging-plan.md) 为准：/login 单次登录，服务端角色授权；受保护 API 未登录 401；uploads/QsTArT 经认证代理。当前不强制首次改密。生产 Exchange 开关必须单独确认，不按历史分批建议自动改值。
 
 审查日期：2026-10-19。对象：`D:\workspace\ai-portal` 当前工作区，而非已经发布的 ECS。
 
@@ -12,7 +14,7 @@
 - 本地测试均隔离数据库和上传目录；真实本地数据库只以只读连接检查，未迁移、写入或清空。
 - 不能仅根据 HEAD 对比界定线上增量：最终应以核实后的生产 SHA/文件快照重新比较。
 
-建议分两批：第一批发布经人工验收的首页、Header、工具及栏目图片能力，Exchange 代码可随依赖部署，但生产 `EXCHANGE_ENABLED=false`；第二批在内部访问控制、图片路径保护及业务验收通过后单独批准开放 Exchange。第一批同样必须解除所有公共发布阻塞项。
+历史曾建议 Exchange 分批开放；当前已增加全站认证，发布范围与开关值须由业务负责人重新批准，不自动关闭原功能。所有生产发布阻塞项仍须解除。
 
 ### 用户提供的 ECS SSH 实检快照
 
@@ -172,7 +174,7 @@ DDL 是增量、可重复的，但不要把整个跨表迁移宣称为必然全�
 
 `deploy/scripts/backup_db.py` 使用 sqlite3 backup API；已用仍有活跃 WAL 的临时数据库验证备份可读、完整性 ok、已提交记录存在。首次验证脚本遗漏关闭检查连接而触发 Windows 临时目录清理错误，修正检查脚本后完整通过；不是业务备份代码错误。备份脚本本身不自动做完整性验收，且文件名秒级，发布应使用唯一备份目录并验证备份。
 
-上传根目录来自 `backend/upload_api.py`：项目根目录 `/uploads`，不支持随意把 backend 搬到另一 release 根而不处理持久化映射。类别是 banners/news（已有）、tools、sections、exchange（新增）；Nginx `/uploads/` alias 与 FastAPI StaticFiles 必须指向同一稳定目录。发布/回滚不覆盖或清理 uploads，不用本地上传文件替代生产图片。
+上传根目录来自 `backend/upload_api.py`：项目根目录 `/uploads`，不支持随意把 backend 搬到另一 release 根而不处理持久化映射。类别是 banners/news（已有）、tools、sections、exchange（新增）；FastAPI StaticFiles 必须指向稳定上传目录；Nginx /uploads/ 只可反向代理进入认证链，不得直接公开 alias。发布/回滚不覆盖或清理 uploads，不用本地上传文件替代生产图片。
 
 本地聚合观察：banners 7 文件约 6.50MB、sections 3 文件约 0.88MB、tools 2 文件约 1.11MB、exchange 0；不能用于估算生产磁盘余量或 Linux 权限。需确认运行用户可写 DB 文件及父目录、上传目录；Nginx 用户可读且父目录可遍历，禁止 chmod 777。
 
@@ -190,7 +192,7 @@ Exchange 删除先提交 DB 删除，再校验固定目录/UUID/符号链接边�
 | API Base | 本地 `.env` 配置 loopback；无 `.env.production` 覆盖 | **默认 build 产物 index-YRyiEgVN.js 含 127.0.0.1:8000，不可发布**；显式同源构建后重新审计 |
 | Dify | 前端 iframe 读取 VITE_DIFY_EMBED_URL | VITE 变量是公开构建内容；使用批准的 Embed 地址，不放 API Key/Token，不在审查文档打印真实配置 |
 | CORS | localhost:5173 与 127.0.0.1:5173、credentials，未 wildcard origin | 同源生产不依赖新增 CORS；独立域名另行审批 |
-| Nginx | 仓库模板含 dist root、API 8000 代理、uploads alias、SPA fallback、5m | 用户确认 ECS 当前由 Nginx 提供入口；正式发布前仍复核现场生效配置，不以模板覆盖 |
+| Nginx | 仓库模板含 dist root、API 8000 代理、uploads/QsTArT 认证代理、SPA fallback、5m | 用户确认 ECS 当前由 Nginx 提供入口；正式发布前仍复核现场生效配置，不以模板覆盖 |
 | systemd 模板 | aiportal 用户、backend/.venv、EnvironmentFile、127.0.0.1:8000 | 实际服务名、路径、用户、代理信任设置待确认 |
 | update.sh | 仓库未找到；用户确认 ECS 存在 `/opt/ai-portal/update.sh` | 本轮未执行、未修改；部署前须单独读审 |
 

@@ -1,8 +1,10 @@
-# AI Portal V1.8 — ECS 分阶段发布与回滚手册
+# AI Portal — ECS 分阶段发布与回滚手册
+
+2026-10-21 更新：唯一登录入口为 /login，管理员无二次认证；保护覆盖业务 API、uploads 与 QsTArT。未登录业务请求为 401。操作前先完成 [当前部署指南](../../DEPLOYMENT.md) 的备份、adminMO 兼容与登录验收，候选文件见 [精确拟暂存清单](git-staging-plan.md)。以下旧现场信息仅为历史快照，不代表本轮已连接或放行 ECS。
 
 > 2026-10-19 现场快照：以下信息来自用户提供的实际 SSH 检查结果，并非 Codex 自行连接 ECS 核验。ECS 源码版本为 `f2e9abe`，Python 为 `3.12.3`，数据库为 `/opt/ai-portal/data/ai_portal.db`，持久化 uploads 为 `/opt/ai-portal/uploads/`，当前入口使用 Nginx，服务器存在 `/opt/ai-portal/update.sh`。生产数据库备份继续使用 `deploy/scripts/backup_db.py` 的 SQLite Backup API。本轮没有执行部署脚本、更新 ECS 或部署；现场值在真正发布窗口仍须由执行人复核。
 
-日期：2026-10-19。**本轮仅编写，没有执行本文生产命令。当前 NO-GO，先解除审查报告的阻塞项。**
+修订日期：2026-10-21。**本轮仅编写，没有执行本文生产命令。生产发布尚未获准；本地提交检查通过不等于生产放行。**
 
 本文分“只读取证”与“需要单独授权的变更操作”。所有安装、创建备份、复制、迁移、配置写入、启停、覆盖和恢复都属于后者；不能整篇复制执行。每阶段由负责人核对输出并签字，不使用自动一路到底的脚本。任何输出与预期不符，停止下一步，保留现场。
 
@@ -21,9 +23,9 @@
 
 仓库模板写的是 `/opt/ai-portal` 和 systemd `aiportal`；用户提供的 SSH 检查结果确认了上述数据库、uploads、Nginx、Python、源码版本和服务器部署脚本信息，但其余服务管理细节仍不得从模板推断。仓库没有 `update.sh`，服务器 `/opt/ai-portal/update.sh` 本轮未执行、未修改，正式部署前必须单独读审。
 
-先批准：发布首页/Header/工具/栏目背景及必要后端，还是另有缩减范围。不要任意只拿一个 HomeView 文件：新增共享组件、API、依赖与迁移是一个兼容集合。原型、截图和测试不放入 Nginx webroot；测试可保留在代码档案。
+先批准完整候选范围：现有首页/Header/新闻/工具/Exchange、统一登录、项目看板、维护与历史及必要后端。当前精确文件集合见拟暂存清单；如需缩减，先重新核对依赖，不任意只拿一个 HomeView 文件。新增共享组件、API、依赖与迁移是一个兼容集合。原型、截图和测试不放入 Nginx webroot；测试可保留在代码档案。
 
-一期：`EXCHANGE_ENABLED=false`，会同时关闭公共读写；后台鉴权仍在。二期：内部边界通过后另行批准开放。关闭开关不能屏蔽已经存在的静态图片。
+Exchange 发布取值由业务负责人明确批准，不默认关闭已有功能。未设置默认 false；false 同时关闭已登录员工列表/投稿。未登录请求先为 401；uploads 始终需要认证，开关不删除或撤销已有图片。
 
 ### 0.2 只读取证命令
 
@@ -39,8 +41,9 @@ UPLOADS='__CONFIRM_PERSISTENT_UPLOADS_ABSOLUTE_PATH__'
 DIST='__CONFIRM_NGINX_DIST_ABSOLUTE_PATH__'
 NGINX_CONF='__CONFIRM_ACTIVE_SERVER_CONFIG_ABSOLUTE_PATH__'
 PUBLIC_ORIGIN='__CONFIRM_HTTPS_ORIGIN__'
+EXCHANGE_RELEASE='__CONFIRM_APPROVED_true_OR_false__'
 
-for value in "$APP_ROOT" "$SERVICE" "$SERVICE_USER" "$OLD_PYTHON" "$DB_PATH" "$UPLOADS" "$DIST" "$NGINX_CONF" "$PUBLIC_ORIGIN"; do
+for value in "$APP_ROOT" "$SERVICE" "$SERVICE_USER" "$OLD_PYTHON" "$DB_PATH" "$UPLOADS" "$DIST" "$NGINX_CONF" "$PUBLIC_ORIGIN" "$EXCHANGE_RELEASE"; do
   case "$value" in *__CONFIRM*|'') printf 'STOP: unresolved value\n' >&2; exit 1;; esac
 done
 
@@ -64,7 +67,7 @@ sudo -u "$SERVICE_USER" test -w "$(dirname "$DB_PATH")"
 
 如不是 systemd/Git checkout，记录真实进程管理方式/文件快照，先重新制定对应切换步骤，不继续套用本文 systemd 命令。确认 Nginx worker 身份和上传目录遍历/读权限，以及后端用户对 uploads 的创建权限。`test -w` 只作权限预检，不能证明磁盘、ACL、实际写入一定成功。
 
-由有权限的运维在服务器本地阅读 `sudo nginx -T`、实际 unit/drop-ins 和 EnvironmentFile。输出可能含内部地址/敏感配置，禁止原样粘贴到公开文档。核对：dist root、SPA fallback、API loopback 代理、uploads alias、TLS、上传大小、缓存、内网保护及后端端口是否能被外部绕过。
+由有权限的运维在服务器本地阅读 `sudo nginx -T`、实际 unit/drop-ins 和 EnvironmentFile。输出可能含内部地址/敏感配置，禁止原样粘贴到公开文档。核对：dist root、SPA fallback、API loopback 代理、uploads 认证代理、TLS、上传大小、缓存、内网保护及后端端口是否能被外部绕过。
 
 如需核对正在运行的进程环境，只输出白名单字段：
 
@@ -92,7 +95,7 @@ PY
 - 候选 SHA 包含审查清单中的所有必要新文件；当前本地 HEAD 不包含未跟踪新功能，不可直接作为候选。
 - 本地/预发布浏览器验收通过；新闻中心旧视觉作为已知范围接受。
 - 备份空间至少覆盖 DB、uploads、旧源码/配置、旧 venv、旧 dist、新 venv、新构建与临时文件并留充足余量；不使用本地上传大小估算 ECS。
-- 已核准维护窗口及“后端先、前端后”的短暂不可用影响；Exchange 一期开关明确为 false。
+- 已核准维护窗口及“后端先、前端后”的短暂不可用影响；Exchange 开关由业务负责人明确批准，未经授权不改变原值。
 
 ## Phase 1 — 发布前一致性备份（写入备份；停服需另行批准）
 
@@ -165,9 +168,9 @@ sha256sum "$DB_BACKUP" "$BACKUP/uploads.tar" "$BACKUP/frontend-dist.tar" "$BACKU
 
 ## Phase 2 — 运行环境与持久目录（先检查，创建属于写操作）
 
-实际有效目录至少涵盖 `banners`、`news`、`tools`、`sections`、`exchange`。如缺失，**经授权后**只在已确认的持久化 UPLOADS 下 `mkdir -p`；核对后端用户可写，Nginx 可读。不执行宽泛 chown/chmod，不 chmod 777，不递归更改未核实目标。
+实际有效目录至少涵盖 `banners`、`news`、`tools`、`sections`、`exchange`。如缺失，**经授权后**只在已确认的持久化 UPLOADS 下 `mkdir -p`；核对后端用户可写，后端可读。不执行宽泛 chown/chmod，不 chmod 777，不递归更改未核实目标。
 
-关键不变量：`backend/upload_api.py` 根据源码父目录确定上传根。本文后续保持 APP_ROOT/backend 不变。若采用 versioned release/symlink，必须先证明每个版本看到同一 uploads，且与 Nginx alias 相同；否则停止该切换方案。DB 使用已确认绝对 DATABASE_PATH，不跟着版本根迁移。
+关键不变量：`backend/upload_api.py` 根据源码父目录确定上传根。本文后续保持 APP_ROOT/backend 不变。若采用 versioned release/symlink，必须先证明每个版本看到同一 uploads，且与 后端受控上传根 相同；否则停止该切换方案。DB 使用已确认绝对 DATABASE_PATH，不跟着版本根迁移。
 
 检查磁盘/依赖安装能力后再准备新环境；Pillow 13.0.0 不支持 Python 3.10。不能在生产现场擅改 requirements 来“装得上”。
 
@@ -265,9 +268,9 @@ PY
 
 ```bash
 # [迁移写入] 主机 EnvironmentFile 已按审批保留原值；不要注入测试账号或新的 SESSION_SECRET。
-# 脚本 load_dotenv 读取候选目录配置；此处显式传入有效 DB，且不开 Exchange。
-DATABASE_PATH="$DB_PATH" EXCHANGE_ENABLED=false "$NEW_VENV/bin/python" "$CANDIDATE/backend/database.py"
-DATABASE_PATH="$DB_PATH" EXCHANGE_ENABLED=false "$NEW_VENV/bin/python" "$CANDIDATE/backend/database.py"
+# 脚本 load_dotenv 读取候选目录配置；此处显式传入有效 DB 与经批准的 Exchange 开关值。
+DATABASE_PATH="$DB_PATH" EXCHANGE_ENABLED="$EXCHANGE_RELEASE" "$NEW_VENV/bin/python" "$CANDIDATE/backend/database.py"
+DATABASE_PATH="$DB_PATH" EXCHANGE_ENABLED="$EXCHANGE_RELEASE" "$NEW_VENV/bin/python" "$CANDIDATE/backend/database.py"
 ```
 
 核对实际 schema：`banners.banner_type` 默认 standard、`tools.cover_image_url` 默认空、section_visuals 和 text_mode、exchange_resources AUTOINCREMENT；旧列/旧数据指纹完全不变。重跑不是错误恢复的替代品：若首次失败，先检查实际 DDL 状态和原因。无凭据初始化条件下如果原生产 admins 为空，不能让新服务以无管理员状态上线，需另行审批账号初始化。
@@ -280,7 +283,7 @@ DATABASE_PATH="$DB_PATH" EXCHANGE_ENABLED=false "$NEW_VENV/bin/python" "$CANDIDA
 
 1. 保持 `$APP_ROOT/backend` 路径不变、DB/uploads/原 `.env` 不动。按已批准 manifest 把候选 `backend/*.py` 和 `requirements.txt` 复制到该目录；不要覆盖 `.env`、`.venv`、数据库、uploads 或用户自定义脚本。**这是覆盖源码操作，只有备份通过并有审批才执行。**
 2. 若旧源码有本地 patch，先合并决策，不能用整树同步抹掉。保留旧源码归档及旧 venv 原路径。
-3. 核对原 unit 的 WorkingDirectory/EnvironmentFile；一期在实际有效配置中明确 `EXCHANGE_ENABLED=false`，保留 DATABASE_PATH、SESSION_SECRET、管理员和其他原值。不要拷贝本地 env。
+3. 核对原 unit 的 WorkingDirectory/EnvironmentFile；按已批准的 EXCHANGE_RELEASE 核对实际开关；未经授权不改变原值。保留 DATABASE_PATH、SESSION_SECRET、管理员和其他原值。不要拷贝本地 env。
 4. 如确认为 systemd：经审批对实际服务创建本次 drop-in，清空旧 ExecStart 并指定 `$NEW_VENV/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000`；**端口、参数、worker 数量及其他必要旧参数以实际服务为准，不因模板随意丢弃**。WorkingDirectory 不变，环境文件沿用。drop-in 可能影响代理信任行为，需保留实际限制，不使用 `forwarded-allow-ips=*`。
 5. 精确记录 drop-in 文件路径和原内容。写入 unit/drop-in 属生产配置变更；未批准则不能自动切换新 venv，停止该部分。
 
@@ -292,7 +295,7 @@ systemctl is-active "$SERVICE"
 sudo journalctl -u "$SERVICE" --since '-5 minutes' --no-pager
 ```
 
-日志只在受控终端检查，不向公开工单复制凭据/内部地址。确认 health、旧 JSON 工具公开接口、栏目接口、未登录管理 401、Exchange 关闭 503。后端失败：不发布新前端，立即执行后端回滚。
+日志只在受控终端检查，不向公开工单复制凭据/内部地址。确认 health 200，未登录新闻/工具/栏目/项目/管理接口 401，登录后按角色 200/403；Exchange 关闭时已登录员工 503。后端失败：不发布新前端，立即执行后端回滚。
 
 ### 5.2 前端切换
 
@@ -326,28 +329,28 @@ if ! mv -- "$NEXT_DIST" "$DIST"; then
 fi
 ```
 
-此操作不碰 backend、DB、uploads。普通目录方案不能称为无中断原子发布。仅静态文件更新通常不需 reload Nginx；本轮不要求改生产 Nginx。只有另外批准实际配置变更时，先 `sudo nginx -t` 成功再 reload。不要把仓库 HTTP 示例整份替换已上线 TLS/网关配置。
+此操作不碰 backend、DB、uploads。普通目录方案不能称为无中断原子发布。仅前端文件更新通常不需 reload Nginx；本轮不要求改生产 Nginx。只有另外批准实际配置变更时，先 `sudo nginx -t` 成功再 reload。不要把仓库 HTTP 示例整份替换已上线 TLS/网关配置。
 
 ## Phase 6 — 上线验证（读取为主，测试写入另行批准）
 
 ```bash
-# 以下为公开读取，不携带管理员 Cookie。
+# 不携带登录 Cookie；仅健康接口允许匿名读取。
 curl -fsS "$PUBLIC_ORIGIN/api/health"
-curl -fsS "$PUBLIC_ORIGIN/api/news"
-curl -fsS "$PUBLIC_ORIGIN/api/tools"
-curl -fsS "$PUBLIC_ORIGIN/api/section-visuals"
-curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/api/exchange"    # 一期应 503
-curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/api/admin/exchange"  # 未登录应 401
-curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/exchange"        # SPA shell 可为 200，不代表功能已开放
+curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/api/news"     # 401
+curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/api/tools"    # 401
+curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/api/projects" # 401
+curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/api/exchange" # 401，即使功能关闭
+curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/api/admin/exchange" # 401
+# 登录后三角色权限、受控图片和 QsTArT 由浏览器验收；不把密码/Cookie 放进命令历史。
 ```
 
-检查 `/`、`/news`、已有 `/news/:id`、`/tools`、`/assistant`、`/exchange` 直接刷新；后台登录及新增管理入口；Banner 混合类型和动作；工具可用/不可用及内部/外链；QsTArT；栏目背景及文字深浅；日历/待办/展开；手机溢出与键盘焦点。API 200 不能代替这些人工验收。
+检查 `/`、`/news`、已有 `/news/:id`、`/tools`、`/assistant`、`/exchange` 直接刷新；/login 单次登录、旧 /admin/login 重定向及新增管理入口；Banner 混合类型和动作；工具可用/不可用及内部/外链；QsTArT；栏目背景及文字深浅；日历/待办/展开；手机溢出与键盘焦点。API 200 不能代替这些人工验收。
 
 图片须从**现有合法返回路径**抽查 200、Content-Type、文件可解码；不使用猜测 UUID，不打印内部链接。用浏览器 Network 确认请求同源、没有访问访问者自己的 localhost、没有 `/api/api`、旧 chunk 无 404。
 
-一期分享表单应明确报未开放，不能出现成功编号；false 同时阻止公开列表，不承诺只读模式。不要为测试在生产擅自启用；如需真实新建/上传/删除，必须有批准的专用测试记录范围及清理清单，不碰既有投稿。
+若批准关闭 Exchange，已登录员工分享表单应明确报未开放，不能出现成功编号；false 同时阻止员工列表，不承诺只读模式。不要为测试在生产擅自启用；如需真实新建/上传/删除，必须有批准的专用测试记录范围及清理清单，不碰既有投稿。
 
-二期放行 Exchange 前：从公司内外分别测试页面、GET、POST、静态图片、直连 8000（如可路由），确保外部无法绕过网关；管理 API 仍独立鉴权。经过正式批准才修改实际有效环境开关并重启对应服务。投稿成功、图持久化、进程重启后读取、后台完整详情、删除与图清理、无图及多条随机均需验收。不能仅放行页面而漏保护 API/图片。
+若批准启用 Exchange：从公司内外分别测试页面、GET、POST、静态图片、直连 8000（如可路由），确保外部无法绕过网关；管理 API 仍独立鉴权。经过正式批准才修改实际有效环境开关并重启对应服务。投稿成功、图持久化、进程重启后读取、后台完整详情、删除与图清理、无图及多条随机均需验收。不能仅放行页面而漏保护 API/图片。
 
 ## Phase 7 — 稳定性观察
 
@@ -380,11 +383,11 @@ curl -sS -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/exchange"        # SPA
 
 ### R4：图片存储故障
 
-先检查稳定 UPLOADS 是否被版本路径改变、alias/权限是否不一致；恢复正确映射通常优于还原旧目录。既有和新图片一律保留，不把旧 uploads.tar 整体覆盖当前目录。必要时从备份仅补回确认缺失的文件（UUID 及引用核对），冲突转人工；绝不删除新上传图片以“匹配旧库”。
+先检查稳定 UPLOADS 是否被版本路径改变、认证代理/后端文件权限是否不一致；恢复正确映射通常优于还原旧目录。既有和新图片一律保留，不把旧 uploads.tar 整体覆盖当前目录。必要时从备份仅补回确认缺失的文件（UUID 及引用核对），冲突转人工；绝不删除新上传图片以“匹配旧库”。
 
 ### R5：Exchange 异常
 
-经批准将实际有效 `EXCHANGE_ENABLED=false` 并重启实际服务（当前实现不是自动热更新配置）；确认公共 GET/POST 503、管理仍鉴权。此开关不能修复全站故障，也不能阻断 `/uploads/exchange/`；如有敏感图片泄露，需同时启动经批准的网关/静态路径阻断事件流程，不以删除用户文件代替保护。
+经批准将实际有效 `EXCHANGE_ENABLED=false` 并重启实际服务（当前实现不是自动热更新配置）；确认已登录员工 GET/POST 503、未登录 401、管理仍鉴权。此开关不能修复全站故障，也不撤销已登录员工读取 `/uploads/exchange/` 的权限；如有敏感图片泄露，需同时启动经批准的网关/静态路径阻断事件流程，不以删除用户文件代替保护。
 
 ### 回滚完成标准
 

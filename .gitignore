@@ -16,7 +16,30 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+# Sidecars, snapshots and backup suffixes at any directory depth.
+*.db-*
+*.db.*
+*.sqlite-*
+*.sqlite.*
+*.sqlite3-*
+*.sqlite3.*
+*.bak
+*.backup
 uploads/
+# Private company project reference; never a public source/test fixture.
+/artifacts/project-dashboard/项目推进看板_2026-10-20.html
+# Private inputs belong in explicit private directories, not beside public fixtures.
+private-data/
+local-private/
+acceptance-data/
+/artifacts/project-dashboard/*.xlsx
+/artifacts/project-dashboard/*.xls
+看板大纲.xlsx
+*.private.html
+*.business-data.html
+# Obsolete local launchers: retain on disk, exclude from this release.
+/backend/scripts/run_project_demo.py
+/backend/scripts/run_project_acceptance.py
 
 # =========================
 # Frontend / Node
@@ -46,6 +69,29 @@ frontend/.env.*
 *.log
 logs/
 backups/
+.cache/
+.pytest_cache/
+.ruff_cache/
+*.tmp
+*.temp
+
+# Private keys / actual credential caches (not source code or safe fixtures).
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+credentials.dpapi
+credentials*.dpapi
+credentials.json
+credentials.*.json
+*test-password*.txt
+*test-password*.json
+*acceptance-password*.txt
+*acceptance-password*.json
 
 # =========================
 # IDE

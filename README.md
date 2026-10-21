@@ -2,6 +2,10 @@
 
 信息运维部智能助手平台。
 
+当前统一入口 `/login`：管理员一次登录进入门户与后台，市场部按授权维护项目，普通员工只读；当前不强制首次改密。员工看板 `/projects`、维护页与历史使用真实 SQLite，管理员受控导入保留 `/admin/projects`。B 卡编号旁更新日期来自真实业务日志，不依赖 Excel AG。
+
+上线以 [部署指南](DEPLOYMENT.md)、[发布验收清单](docs/releases/release-acceptance-checklist.md) 和 [精确拟暂存清单](docs/releases/git-staging-plan.md) 为准：生产构建必须显式 `VITE_API_BASE_URL=/api`，受保护 uploads/QsTArT 不能由公开静态路径绕过认证。下方早期版本记录不代表当前发布流程。
+
 技术栈：
 
 - Vue 3
