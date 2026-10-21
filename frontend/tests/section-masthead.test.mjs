@@ -217,11 +217,13 @@ test('confirmed tool image stays local until one multipart save and survives err
     assert.equal(bindings.savedImage.value, '/uploads/tools/old.webp')
     assert.ok(bindings.previewImage.value.startsWith('blob:'))
     globalThis.fetch = async (url, init) => {
+      if (String(url).endsWith('/api/employee/csrf')) return new Response(JSON.stringify({ csrfToken: 'tool-test-csrf' }))
       requests++
       assert.ok(String(url).endsWith('/api/admin/tools'))
       assert.equal(init.method, 'POST')
       assert.equal(init.credentials, 'include')
-      assert.equal(init.headers, undefined)
+      assert.equal(init.headers.get('X-CSRF-Token'), 'tool-test-csrf')
+      assert.equal(init.headers.has('Content-Type'), false)
       assert.ok(init.body instanceof FormData)
       assert.equal(init.body.get('file').type, 'image/webp')
       const payload = JSON.parse(init.body.get('payload'))

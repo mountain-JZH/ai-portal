@@ -1,3 +1,4 @@
+import { personalStorage } from './personalStorage'
 export const TODO_STORAGE_KEY = 'ai-portal-todos-v1'
 export const TODO_UPDATED_EVENT = 'ai-portal-todos-updated'
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
@@ -74,7 +75,7 @@ export function readTodoStore() {
   let storedTodos
 
   try {
-    storedTodos = localStorage.getItem(TODO_STORAGE_KEY)
+    storedTodos = personalStorage.getItem(TODO_STORAGE_KEY)
   } catch {
     return {}
   }
@@ -92,7 +93,7 @@ export function readTodoStore() {
 
   if (changed) {
     try {
-      localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos))
+      personalStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos))
     } catch {
       // The normalized in-memory data remains usable when local storage is unavailable.
     }

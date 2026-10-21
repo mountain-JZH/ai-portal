@@ -18,12 +18,29 @@ import NewsView from '../views/NewsView.vue'
 import ToolsView from '../views/ToolsView.vue'
 import ToolAdminView from '../views/ToolAdminView.vue'
 import ToolFormView from '../views/ToolFormView.vue'
-import { fetchCurrentAdmin } from '../utils/adminAuth'
+import { resolveAccess } from '../utils/routeAccess'
 
 const router = createRouter({
   history: createWebHistory(),
 
   routes: [
+    {
+      path: '/projects/new',
+      name: 'project-new',
+      component: () => import('../views/ProjectEditView.vue'),
+      meta: { requiresProjectEditor: true },
+    },
+    {
+      path: '/projects/:id/edit',
+      name: 'project-edit',
+      component: () => import('../views/ProjectEditView.vue'),
+      meta: { requiresProjectEditor: true },
+    },
+    {
+      path: '/projects',
+      name: 'projects',
+      component: () => import('../views/ProjectsView.vue'),
+    },
     {
       path: '/',
       name: 'home',
@@ -70,6 +87,16 @@ const router = createRouter({
         requiresAdmin: true,
       },
       children: [
+        {
+          path: 'employees',
+          name: 'employees-admin',
+          component: () => import('../views/EmployeesAdminView.vue'),
+        },
+        {
+          path: 'projects',
+          name: 'projects-admin',
+          component: () => import('../views/ProjectsAdminView.vue'),
+        },
         {
           path: 'exchange',
           name: 'exchange-admin',
@@ -150,21 +177,18 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to) => {
-  if (!to.matched.some((record) => record.meta.requiresAdmin)) return true
-
-  try {
-    const admin = await fetchCurrentAdmin()
-
-    if (admin) return true
-  } catch {
-    // The login page presents the user-facing service error if auth is unavailable.
-  }
-
-  return {
-    name: 'login',
-    query: { redirect: to.fullPath },
-  }
+router.addRoute({
+  path: '/admin/login',
+  name: 'admin-login',
+  redirect: (to) => ({ name: 'login', query: { ...to.query, redirect: to.query.redirect || '/admin' } }),
 })
+router.addRoute({
+  path: '/change-password',
+  name: 'change-password',
+  component: () => import('../views/ChangePasswordView.vue'),
+  meta: { layout: 'auth' },
+})
+
+router.beforeEach((to) => resolveAccess(to))
 
 export default router

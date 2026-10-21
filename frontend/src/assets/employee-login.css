@@ -1,0 +1,28 @@
+.employee-login-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(380px, 1fr); color: #22292c; background: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+.employee-login-brand { display: flex; flex-direction: column; justify-content: center; padding: clamp(32px, 7vw, 112px); background: #f7b334; }
+.employee-wordmark { margin-bottom: 64px; font-size: 26px; font-weight: 700; }
+.employee-wordmark span { background: linear-gradient(transparent 48%, #8dfc08 48%); }
+.employee-login-brand h1 { margin: 0 0 28px; color: #22292c; font-size: clamp(46px, 5.4vw, 88px); font-weight: 700; line-height: 1.04; letter-spacing: -.045em; }
+.employee-login-brand p { margin: 0; font-size: 18px; line-height: 1.7; }
+.employee-login-panel { display: grid; place-items: center; padding: 48px 32px; }
+.employee-auth-form { display: grid; gap: 20px; width: min(100%, 380px); }
+.employee-auth-form h2 { margin: 0; font-size: 30px; font-weight: 700; }
+.employee-auth-eyebrow { color: #6d5b55; font-size: 13px; margin: 0; }
+.employee-auth-hint { color: #6d5b55; font-size: 14px; line-height: 1.7; margin: 0; }
+.employee-auth-form label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
+.employee-auth-form input { box-sizing: border-box; width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid #ccd1d3; border-radius: 8px; background: #fff; color: #22292c; font: inherit; }
+.employee-auth-primary { min-height: 48px; border: 0; border-radius: 8px; background: #f7b334; color: #22292c; font: inherit; font-weight: 600; cursor: pointer; }
+.employee-auth-primary:hover { background: #efaa29; }
+.employee-auth-primary:disabled { opacity: .6; cursor: wait; }
+.employee-auth-form :focus-visible { outline: 2px solid #22292c; outline-offset: 3px; }
+.employee-auth-error { color: #a72435; font-size: 14px; line-height: 1.6; margin: 0; }
+.employee-auth-form a { color: #6d5b55; font-size: 14px; }
+.admin-verification .employee-login-brand h1 { font-size: clamp(44px, 4vw, 64px); }
+@media (max-width: 760px) {
+  .employee-login-page { grid-template-columns: minmax(0, 1fr); }
+  .employee-login-brand { padding: 28px 24px; }
+  .employee-wordmark { margin-bottom: 28px; font-size: 22px; }
+  .employee-login-brand h1 { font-size: 44px; margin-bottom: 18px; }
+  .employee-login-brand p { font-size: 15px; }
+  .employee-login-panel { padding: 36px 24px; }
+}

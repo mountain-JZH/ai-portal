@@ -153,6 +153,7 @@ test('real API adapter uses multipart, resolves persisted images, refreshes afte
   const calls = []
   globalThis.fetch = async (url, options = {}) => {
     calls.push([url, options])
+    if (String(url).endsWith('/api/employee/csrf')) return new Response(JSON.stringify({ csrfToken: 'test-csrf-only' }))
     if (options.method === 'DELETE') {
       rows.splice(0)
       return new Response(JSON.stringify({ id: 1 }), { status: 200 })
@@ -178,12 +179,13 @@ test('real API adapter uses multipart, resolves persisted images, refreshes afte
     const saved = await service.submitExchangeResource(fields)
     assert.equal(saved.displayNumber, '001')
     const post = calls.find(([, options]) => options.method === 'POST')[1]
-    assert.equal(post.headers, undefined)
+    assert.equal(post.headers.get('X-CSRF-Token'), 'test-csrf-only')
+    assert.equal(post.headers.has('Content-Type'), false)
     assert.equal(post.body.get('file').type, 'image/webp')
     const payload = JSON.parse(post.body.get('payload'))
     assert.equal(payload.id, undefined)
     assert.equal(payload.createdAt, undefined)
-    assert.equal(post.credentials, 'omit')
+    assert.equal(post.credentials, 'include')
     assert.equal((await service.loadAdminExchangeResources()).total, 1)
     await service.deleteExchangeResource(1)
     assert.equal(calls.find(([, options]) => options.method === 'DELETE')[1].credentials, 'include')

@@ -1,11 +1,12 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { currentAdmin, logoutAdmin } from '../utils/adminAuth'
 
 const route = useRoute()
 const router = useRouter()
+const logoutError = ref('')
 
 const isDashboardActive = computed(() => route.name === 'admin-dashboard')
 const isNewsActive = computed(() => route.path.startsWith('/admin/news'))
@@ -15,18 +16,18 @@ const isAnnouncementActive = computed(() =>
 )
 const isToolActive = computed(() => route.path.startsWith('/admin/tools'))
 const isExchangeActive = computed(() => route.path.startsWith('/admin/exchange'))
+const isProjectsActive = computed(() => route.path.startsWith('/admin/projects'))
 
 async function handleLogout() {
   try {
     await logoutAdmin()
-  } finally {
     await router.replace('/login')
-  }
+  } catch { logoutError.value = '退出后台未完成，请重试' }
 }
 </script>
 
 <template>
-  <div class="admin-layout">
+  <div class="admin-layout" :class="{ 'projects-admin-layout': isProjectsActive }">
     <header class="admin-header">
       <div class="admin-header-inner">
         <RouterLink to="/admin" class="admin-brand">
@@ -39,10 +40,12 @@ async function handleLogout() {
 
         <div class="admin-account">
           <span class="admin-username">管理员：{{ currentAdmin?.username || '—' }}</span>
+          <RouterLink to="/change-password" class="portal-link">修改密码</RouterLink>
           <button type="button" class="logout-button" @click="handleLogout">
             退出登录
           </button>
           <RouterLink to="/" class="portal-link">返回门户 →</RouterLink>
+          <span v-if="logoutError" role="alert">{{ logoutError }}</span>
         </div>
       </div>
     </header>
@@ -103,6 +106,16 @@ async function handleLogout() {
             <RouterLink to="/admin/exchange" class="admin-nav-link admin-nav-child" :class="{ active: isExchangeActive }">互通有无管理</RouterLink>
           </div>
 
+          <div class="admin-nav-group">
+            <span class="admin-nav-label">市场部项目</span>
+            <RouterLink to="/admin/projects" class="admin-nav-link admin-nav-child" :class="{ active: isProjectsActive }">项目推进看板</RouterLink>
+          </div>
+
+          <div class="admin-nav-group">
+            <span class="admin-nav-label">账号管理</span>
+            <RouterLink to="/admin/employees" class="admin-nav-link admin-nav-child" :class="{ active: route.path === '/admin/employees' }">员工账号管理</RouterLink>
+          </div>
+
           <div class="admin-coming-soon" aria-label="后续管理能力">
             <span>更多管理能力</span>
             <small>即将开放</small>
@@ -126,6 +139,11 @@ async function handleLogout() {
     linear-gradient(180deg, rgba(238, 242, 255, 0.58), transparent 220px),
     var(--color-bg);
 }
+
+.projects-admin-layout { background: #f5f6f7; }
+.projects-admin-layout .admin-brand-mark { background: #f7b334; color: #22292c; box-shadow: none; }
+.projects-admin-layout .admin-brand-copy small { color: #6d5b55; }
+.projects-admin-layout .admin-nav-link.active { background: #fff1d6; color: #22292c; border-color: #f7b334; }
 
 .admin-header {
   min-height: 68px;

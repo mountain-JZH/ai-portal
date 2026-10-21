@@ -1,13 +1,21 @@
 <script setup>
-import { RouterLink, useRoute } from 'vue-router'
+import { ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { currentEmployee, logoutEmployee } from '../utils/employeeAuth'
 
 const route = useRoute()
+const router = useRouter()
+const logoutError = ref('')
+async function exitEmployee() {
+  try { await logoutEmployee(); await router.replace('/login') }
+  catch { logoutError.value = '退出未完成，请重试' }
+}
 
 // Enable future entries only after their pages and routes are implemented.
 const navigation = [
   { label: '首页', to: '/', enabled: true },
   { label: '新闻动态', to: '/news', enabled: true },
-  { label: '项目看板', to: '/projects', enabled: false },
+  { label: '项目看板', to: '/projects', enabled: true },
   { label: '互通有无', to: '/exchange', enabled: true },
   { label: 'AI 工具', to: '/tools', enabled: true },
   { label: '后台', to: '/admin', enabled: true, admin: true },
@@ -50,10 +58,20 @@ function isCurrent(target) {
         <span class="brand-subtitle">信息运维部</span>
       </RouterLink>
     </div>
+    <div v-if="currentEmployee" class="employee-account">
+      <span>{{ currentEmployee.name }} · {{ currentEmployee.department }}</span>
+      <RouterLink to="/change-password">修改密码</RouterLink>
+      <button type="button" @click="exitEmployee">退出登录</button>
+      <span v-if="logoutError" role="alert">{{ logoutError }}</span>
+    </div>
   </header>
 </template>
 
 <style scoped>
+.employee-account { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 12px; max-width: 1600px; margin: 0 auto; padding: 0 24px 8px; color: #6d5b55; font-size: 12px; }
+.employee-account button { border: 0; background: transparent; color: #22292c; cursor: pointer; font: inherit; padding: 6px; }
+.employee-account a { color: inherit; text-underline-offset: 3px; }
+.employee-account button:focus-visible { outline: 2px solid #f7b334; outline-offset: 2px; }
 .header {
   --header-bg: #ffffff;
   --header-foreground: #22292c;

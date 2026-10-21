@@ -1,4 +1,5 @@
 <script setup>
+import { personalStorage } from '../utils/personalStorage'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import {
@@ -62,7 +63,7 @@ function quadrantStatus(quadrantKey) {
 function refreshMappings(cleanStoredData = false) {
   let storedValue
   try {
-    const storedMappings = localStorage.getItem(QUADRANT_STORAGE_KEY)
+    const storedMappings = personalStorage.getItem(QUADRANT_STORAGE_KEY)
     storedValue = storedMappings ? JSON.parse(storedMappings) : {}
   } catch {
     storedValue = {}

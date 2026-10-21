@@ -12,7 +12,7 @@ const { default: Header } = await server.ssrLoadModule('/src/components/AppHeade
 async function renderHeader(path) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: ['/', '/news', '/news/:id', '/exchange', '/tools', '/assistant', '/admin'].map((path) => ({
+    routes: ['/', '/news', '/news/:id', '/projects', '/exchange', '/tools', '/assistant', '/admin', '/admin/projects'].map((path) => ({
       path, component: { template: '<div />' },
     })),
   })
@@ -24,9 +24,9 @@ test('header exposes only available navigation in the agreed order', async () =>
   const html = await renderHeader('/')
   const nav = html.match(/<nav\b[\s\S]*?<\/nav>/)?.[0] || ''
   assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((match) => match[1]), [
-    '/', '/news', '/exchange', '/tools', '/admin',
+    '/', '/news', '/projects', '/exchange', '/tools', '/admin',
   ])
-  assert.doesNotMatch(html, /平台公告|brand-logo|\/projects/)
+  assert.doesNotMatch(html, /平台公告|brand-logo|href="\/admin\/projects"/)
   assert.match(html, /AI <span\b[^>]*class="portal-word"[^>]*>PORTAL<\/span>/)
   assert.match(html, /aria-label="信息运维部智能助手平台，返回首页"/)
   assert.match(html, /nav-item-admin/)
@@ -44,7 +44,7 @@ test('editorial header keeps Chinese brand, navigation and English signature in 
   assert.ok(html.indexOf('</nav>') < html.indexOf(signature))
 })
 
-for (const [path, target] of [['/', '/'], ['/news', '/news'], ['/news/123', '/news'], ['/exchange', '/exchange'], ['/tools', '/tools']]) {
+for (const [path, target] of [['/', '/'], ['/news', '/news'], ['/news/123', '/news'], ['/projects', '/projects'], ['/admin/projects', '/admin'], ['/exchange', '/exchange'], ['/tools', '/tools']]) {
   test(`${path} highlights only ${target} with an accessible current-page marker`, async () => {
     const html = await renderHeader(path)
     const links = [...html.matchAll(/<a\b[^>]*class="[^"]*nav-link[^>]*>/g)].map((match) => match[0])
