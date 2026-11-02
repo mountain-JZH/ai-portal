@@ -13,7 +13,6 @@ npm run dev
 
 ```sh
 npm run lint
-npm test
 npm run build
 ```
 
@@ -21,8 +20,8 @@ npm run build
 
 - `src/components/`：公共与首页功能组件
 - `src/views/`：路由页面
-- `src/data/`：资源交流展示数据
+- `src/data/`：Banner、公告和工具配置数据
 - `src/utils/`：Todo 与四象限本地存储辅助逻辑
 - `public/tools/qstart/`：QsTArT 静态工具
 
-新闻、Banner、公告、工具及资源交流通过 FastAPI API 使用 SQLite 数据。Calendar、Todo、四象限和首页个人时间线（`PersonalTimeline.vue`）使用按员工隔离的浏览器存储。服务端项目看板已经移除。完整版本记录见项目根目录 `README.md`。
+门户的 Banner、公告和工具使用前端 JSON，Calendar、Todo、四象限及项目数据使用浏览器 localStorage；新闻模块通过 FastAPI API 读取和管理 SQLite 数据。完整版本记录与下一阶段计划见项目根目录 `README.md`。

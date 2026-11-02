@@ -1,5 +1,4 @@
 <script setup>
-import { employeeFetch as fetch } from '../utils/employeeAuth'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 

@@ -1,6 +1,6 @@
 <script setup>
 import PriorityMatrix from './PriorityMatrix.vue'
-import PersonalTimeline from './PersonalTimeline.vue'
+import ProjectNodeManager from './ProjectNodeManager.vue'
 
 const props = defineProps({
   selectedDate: {
@@ -43,7 +43,7 @@ const emit = defineEmits([
     }"
     aria-label="工作计划扩展"
   >
-    <PersonalTimeline
+    <ProjectNodeManager
       class="timeline-module"
       :node-date-selection-mode="props.nodeDateSelectionMode"
       :node-date-selection-result="props.nodeDateSelectionResult"

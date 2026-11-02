@@ -1,5 +1,4 @@
 <script setup>
-import { personalStorage } from '../utils/personalStorage'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import {
@@ -228,7 +227,7 @@ function persist(storageKey, value) {
   let saved = true
 
   try {
-    personalStorage.setItem(storageKey, JSON.stringify(value))
+    localStorage.setItem(storageKey, JSON.stringify(value))
     storageMessage.value = '已保存到本机'
   } catch {
     storageMessage.value = '本地保存失败'
@@ -390,7 +389,7 @@ function confirmTodoDelete(todoId) {
 
 onMounted(() => {
   try {
-    const storedMarkers = personalStorage.getItem(MARKER_STORAGE_KEY)
+    const storedMarkers = localStorage.getItem(MARKER_STORAGE_KEY)
     markerEntries.value = storedMarkers ? sanitizeMarkerEntries(JSON.parse(storedMarkers)) : {}
   } catch {
     markerEntries.value = {}

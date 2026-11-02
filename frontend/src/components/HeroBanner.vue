@@ -1,5 +1,4 @@
 <script setup>
-import { employeeFetch as fetch } from '../utils/employeeAuth'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -31,8 +30,7 @@ const currentSlide = computed(() => {
     image: imageUrl,
     altText: banner.bannerType === 'image_only' ? 'Banner 头图' : banner.title,
     kicker: [banner.category, date].filter(Boolean).join(' / ') || 'AI PORTAL / 信息运维',
-    actionType: banner.action?.type === 'route' && !router.resolve(banner.action.target || '').matched.length
-      ? 'none' : banner.action?.type || 'none',
+    actionType: banner.action?.type || 'none',
     actionTarget: banner.action?.target || '',
   }
 })
@@ -89,7 +87,7 @@ function handleBannerAction() {
     document.getElementById('dify-chatbot-bubble-button')?.click()
     return
   }
-  if (action?.type === 'route' && action.target?.startsWith('/') && !action.target.startsWith('//') && router.resolve(action.target).matched.length) {
+  if (action?.type === 'route' && action.target?.startsWith('/') && !action.target.startsWith('//')) {
     router.push(action.target)
     return
   }

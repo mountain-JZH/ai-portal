@@ -1,6 +1,5 @@
 import { API_BASE_URL } from '../config/api'
 import { adminFetch } from '../utils/adminAuth'
-import { employeeFetch } from '../utils/employeeAuth'
 import { safeUrl, validateExchangeFields } from '../utils/exchangeDiscovery'
 
 export function resolveExchangeImage(path) {
@@ -29,8 +28,9 @@ function resourceFromApi(resource) {
 async function requestJson(path, init = {}, authenticated = false) {
   let response
   try {
-    response = await (authenticated ? adminFetch : employeeFetch)(`${API_BASE_URL}${path}`, {
+    response = await (authenticated ? adminFetch : fetch)(`${API_BASE_URL}${path}`, {
       ...init,
+      ...(authenticated ? {} : { credentials: 'omit' }),
     })
   } catch (error) {
     if (error.message === 'Authentication required') throw error

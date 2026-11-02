@@ -1,4 +1,3 @@
-import { personalStorage } from './personalStorage'
 export const QUADRANT_STORAGE_KEY = 'ai-portal-quadrant-v1'
 export const QUADRANT_UPDATED_EVENT = 'ai-portal-quadrants-updated'
 export const QUADRANT_STATUS_COLORS = {
@@ -66,7 +65,7 @@ export function sanitizeQuadrantStore(value, todosByDate = {}) {
 
 export function readQuadrantStore(todosByDate = {}) {
   try {
-    const storedMappings = personalStorage.getItem(QUADRANT_STORAGE_KEY)
+    const storedMappings = localStorage.getItem(QUADRANT_STORAGE_KEY)
     return storedMappings
       ? sanitizeQuadrantStore(JSON.parse(storedMappings), todosByDate)
       : {}
@@ -87,7 +86,7 @@ export function writeQuadrantStore(mappings) {
   let saved = true
 
   try {
-    personalStorage.setItem(QUADRANT_STORAGE_KEY, JSON.stringify(mappings))
+    localStorage.setItem(QUADRANT_STORAGE_KEY, JSON.stringify(mappings))
   } catch {
     saved = false
   }

@@ -18,7 +18,7 @@ import NewsView from '../views/NewsView.vue'
 import ToolsView from '../views/ToolsView.vue'
 import ToolAdminView from '../views/ToolAdminView.vue'
 import ToolFormView from '../views/ToolFormView.vue'
-import { resolveAccess } from '../utils/routeAccess'
+import { fetchCurrentAdmin } from '../utils/adminAuth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -70,11 +70,6 @@ const router = createRouter({
         requiresAdmin: true,
       },
       children: [
-        {
-          path: 'employees',
-          name: 'employees-admin',
-          component: () => import('../views/EmployeesAdminView.vue'),
-        },
         {
           path: 'exchange',
           name: 'exchange-admin',
@@ -155,18 +150,21 @@ const router = createRouter({
   ],
 })
 
-router.addRoute({
-  path: '/admin/login',
-  name: 'admin-login',
-  redirect: (to) => ({ name: 'login', query: { ...to.query, redirect: to.query.redirect || '/admin' } }),
-})
-router.addRoute({
-  path: '/change-password',
-  name: 'change-password',
-  component: () => import('../views/ChangePasswordView.vue'),
-  meta: { layout: 'auth' },
-})
+router.beforeEach(async (to) => {
+  if (!to.matched.some((record) => record.meta.requiresAdmin)) return true
 
-router.beforeEach((to) => resolveAccess(to))
+  try {
+    const admin = await fetchCurrentAdmin()
+
+    if (admin) return true
+  } catch {
+    // The login page presents the user-facing service error if auth is unavailable.
+  }
+
+  return {
+    name: 'login',
+    query: { redirect: to.fullPath },
+  }
+})
 
 export default router

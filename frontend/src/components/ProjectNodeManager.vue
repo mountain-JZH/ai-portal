@@ -1,5 +1,4 @@
 <script setup>
-import { personalStorage } from '../utils/personalStorage'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 import DeleteConfirm from './DeleteConfirm.vue'
@@ -112,8 +111,8 @@ function persist(nextProjects = projects.value, nextCurrentId = currentProjectId
   projects.value = nextProjects
   currentProjectId.value = nextCurrentId
   try {
-    personalStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(nextProjects))
-    personalStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, nextCurrentId)
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(nextProjects))
+    localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, nextCurrentId)
     storageMessage.value = ''
     return true
   } catch {
@@ -308,14 +307,14 @@ function nodeState(node) {
 
 onMounted(() => {
   try {
-    const storedProjects = personalStorage.getItem(PROJECT_STORAGE_KEY)
+    const storedProjects = localStorage.getItem(PROJECT_STORAGE_KEY)
     projects.value = storedProjects ? sanitizeProjects(JSON.parse(storedProjects)) : []
   } catch {
     projects.value = []
   }
 
   try {
-    const storedCurrentId = personalStorage.getItem(CURRENT_PROJECT_STORAGE_KEY) || ''
+    const storedCurrentId = localStorage.getItem(CURRENT_PROJECT_STORAGE_KEY) || ''
     currentProjectId.value = projects.value.some((project) => project.id === storedCurrentId)
       ? storedCurrentId
       : projects.value[0]?.id || ''

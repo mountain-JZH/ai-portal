@@ -19,20 +19,8 @@ server {
         proxy_pass_header Set-Cookie;
     }
 
-    # No alias: every attachment request must pass the employee session gate.
-    location ^~ /uploads/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Cookie $http_cookie;
-    }
-
-    # The standalone tool is not an unauthenticated static-file exception.
-    location ^~ /tools/qstart {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Cookie $http_cookie;
+    location /uploads/ {
+        alias /opt/ai-portal/uploads/;
     }
 
     location / {

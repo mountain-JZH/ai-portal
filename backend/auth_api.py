@@ -1,8 +1,9 @@
-"""Compatibility endpoints for the single account login, not administrator elevation."""
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from employee_security import denied, get_current_employee
+from auth_security import verify_password
+from database import get_db_connection
+
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -17,18 +18,70 @@ class AdminResponse(BaseModel):
     username: str
 
 
+def _unauthorized():
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+    )
+
+
 def get_current_admin(request: Request):
-    employee = get_current_employee(request)
-    if not employee["admin_id"] or not employee["admin_active"]:
-        raise denied("ADMIN_AUTH_REQUIRED", 403)
-    return {"id": employee["admin_id"], "username": employee["admin_username"]}
+    admin_id = request.session.get("admin_id")
+
+    if not isinstance(admin_id, int):
+        raise _unauthorized()
+
+    connection = get_db_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT id, username
+            FROM admins
+            WHERE id = ? AND is_active = 1
+            """,
+            (admin_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    if row is None:
+        request.session.clear()
+        raise _unauthorized()
+
+    return dict(row)
 
 
-@router.post("/login")
+@router.post("/login", response_model=AdminResponse)
 def login(payload: LoginRequest, request: Request):
-    # Old clients perform a fresh unified login; no second-factor state survives.
-    from employee_api import Credentials, login as account_login
-    return account_login(Credentials(**payload.model_dump()), request)
+    username = payload.username.strip()
+    connection = get_db_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT id, username, password_hash
+            FROM admins
+            WHERE username = ? AND is_active = 1
+            """,
+            (username,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    if row is None or not verify_password(payload.password, row["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
+
+    request.session.clear()
+    request.session["admin_id"] = row["id"]
+
+    return {
+        "id": row["id"],
+        "username": row["username"],
+    }
 
 
 @router.get("/me", response_model=AdminResponse)
@@ -38,5 +91,5 @@ def get_me(request: Request):
 
 @router.post("/logout")
 def logout(request: Request):
-    from employee_api import logout as account_logout
-    return account_logout(request)
+    request.session.clear()
+    return {"message": "Logged out"}

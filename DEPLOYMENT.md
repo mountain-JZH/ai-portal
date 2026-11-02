@@ -1,39 +1,268 @@
-﻿# AI Portal 精简版部署指南
+# AI Portal 单机部署指南
 
-2026-11-02。新候选仅允许不含服务端项目看板的版本。入口保持公网 IP + HTTP 80，域名和 HTTPS 不作为本轮阻断项。所有生产切换、数据库写入、服务重启与删除需人工批准。
+本文面向普通 Linux ECS，使用 Nginx 托管 Vue 静态文件，并将 `/api` 反向代理到仅监听 `127.0.0.1:8000` 的 FastAPI。数据库继续使用 SQLite。本指南不依赖特定云厂商，也不使用 Docker。
 
-配套：[ECS 审计、发布及回滚](docs/releases/ecs-deployment-runbook.md)、[验收清单](docs/releases/release-acceptance-checklist.md)、[精简报告](docs/releases/slim-release-report.md)。
+## 1. 推荐目录
 
-## 本地验证
-
-```powershell
-backend/.venv/Scripts/python.exe deploy/scripts/run_backend_tests.py
-cd frontend
-npm.cmd test
-$env:VITE_API_BASE_URL='/api'
-npm.cmd run build
+```text
+/opt/ai-portal/
+├─ backend/
+│  ├─ .venv/
+│  └─ .env
+├─ frontend/
+│  └─ dist/
+├─ data/
+│  └─ ai_portal.db
+├─ uploads/
+│  ├─ banners/
+│  └─ news/
+├─ backups/
+└─ deploy/
 ```
 
-后端集成套件各自持有模块级 FastAPI、数据库和 uploads，必须逐套独立进程运行。直接 unittest discover 会复用已缓存应用和失效临时路径，不是有效的整套运行方式。测试只使用临时虚构数据。
+数据库和 `uploads` 都属于生产持久化数据，不要放入 `frontend/dist`，不要通过 Git 管理，也不要在代码发布时覆盖。
 
-## 发布约束
+## 2. 准备服务器
 
-1. 先核实 ECS 实际 unit/drop-in、cwd、Python/venv、Nginx root/upstream、数据库和上传目录。不得根据目录名称判断用途；审计脚本不导入 main.py。
-2. 不运行未审查的 `/opt/ai-portal/update.sh`。只读审计后，针对实际脚本形成具体替换 diff，再批准执行。
-3. 固定精简候选制品 SHA256；工作树修改没有提交时，不将旧 HEAD 冒充本轮候选。未经授权不 push GitHub。
-4. 保留当前稳定源码、dist、venv 原路径和私有配置，使用独立新 venv。Python 与 Node 版本以 requirements/package 及实际安装结果为准。
-5. 批准维护窗口后，备份最新生产 SQLite（SQLite Backup API）、uploads、代码/构建/配置。验证备份可打开及校验和。不要直接复制活跃 WAL 数据库作为一致备份。
-6. 不覆盖生产 SQLite、uploads、`.env` 或 SESSION_SECRET；不修改原管理员密码。不执行 DROP TABLE。旧项目表/历史权限字段保留，新库不再初始化它们。
-7. 本轮不重复大规模生产副本迁移演练；核对必要 schema 差异、管理员关联冲突即可。`main.py` 启动会调用幂等初始化，生产启动属于可能写库的获批操作。
-8. 只发布精简版后端和同源前端 dist；不发布本地数据库、用户素材、设计实验 HTML 或密钥。Dify 公开 Embed URL 应与批准的生产值一致，不能用本地值盲目替换。
-9. 若使用版本化候选根：`upload_api.py` 从源码父目录计算 uploads。必须在候选根建立指向 `/opt/ai-portal/uploads` 的已批准链接并验证真实路径；DB 使用确认的绝对路径。不能只改 systemd cwd 后直接启动。
-10. Nginx 的 `/api/`、`/uploads/`、`/tools/qstart` 都进入 FastAPI；附件和静态工具不能公开 alias 绕过员工认证。Uvicorn 仅 loopback，upstream 端口一致，不用 --reload。
-11. 修改 Nginx 先 nginx -t，再按批准流程 reload；systemd drop-in 的 ExecStart 覆盖需先清空旧值，保留实际有效安全设置。具体差异在现场审计后形成。
-12. 验收管理员及员工登录、首页、新闻/内容、工具、资源交流、Dify、后台及退出失效。Exchange 沿用现有开关，不擅自开启或关闭。
-13. 切换验收后再提出第二批旧产物删除清单，保留必要稳定版和重要备份。
+以下命令以 Debian/Ubuntu 系发行版为例，其他发行版请替换包管理命令：
 
-## 身份与 HTTP
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip nginx nodejs npm git
+```
 
-原 `admins` ID 和 Argon2 哈希继续使用。管理员以原账号和密码统一登录；同名未关联员工冲突必须核实，不能自动合并或重置密码。`set_admin_password.py` 仅用于另行批准的账号恢复，不作为发布步骤。
+确认版本满足项目要求：
 
-当前公网 HTTP 无传输加密，账号密码及会话可能被监听/劫持。保留 HttpOnly、SameSite、CSRF、限流及现有网络保护；Secure Cookie 与实际协议匹配，若现场已有 TLS/网关保护，不擅自降低。未来可独立安排 HTTPS。
+```bash
+python3 --version
+node --version
+npm --version
+nginx -v
+```
+
+创建非 root 服务账号和目录。账号名称可以调整，但需同步修改 systemd 模板：
+
+```bash
+sudo useradd --system --create-home --shell /usr/sbin/nologin aiportal
+sudo mkdir -p /opt/ai-portal
+sudo chown -R aiportal:aiportal /opt/ai-portal
+```
+
+## 3. 上传项目
+
+可通过 Git 拉取或将项目文件上传到 `/opt/ai-portal`。不要上传本机 `.env`、`.venv`、数据库或 `node_modules`。
+
+```bash
+cd /opt/ai-portal
+sudo -u aiportal git clone <repository-url> .
+sudo -u aiportal mkdir -p data backups uploads/banners uploads/news
+```
+
+如果采用文件上传，请保持同样的目录结构和属主权限。
+
+## 4. 创建后端虚拟环境
+
+```bash
+cd /opt/ai-portal/backend
+sudo -u aiportal python3 -m venv .venv
+sudo -u aiportal .venv/bin/python -m pip install --upgrade pip
+sudo -u aiportal .venv/bin/python -m pip install -r requirements.txt
+```
+
+## 5. 配置后端环境变量
+
+```bash
+cd /opt/ai-portal/backend
+sudo -u aiportal cp .env.example .env
+sudo chmod 600 .env
+sudo chown aiportal:aiportal .env
+```
+
+编辑 `.env`，至少设置：
+
+```dotenv
+ADMIN_USERNAME=<initial-admin-name>
+ADMIN_PASSWORD=<strong-initial-password>
+SESSION_SECRET=<long-random-secret>
+SESSION_COOKIE_SECURE=true
+DATABASE_PATH=/opt/ai-portal/data/ai_portal.db
+BACKUP_DIR=/opt/ai-portal/backups
+```
+
+如继续使用现有 Dify 后端能力，再按实际环境填写 `DIFY_API_URL` 和 `DIFY_API_KEY`。不要把 `.env` 提交到 Git。
+
+可使用系统工具生成 Session Secret，例如：
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+## 6. 初始化数据库和初始管理员
+
+从 backend 目录执行：
+
+```bash
+cd /opt/ai-portal/backend
+sudo -u aiportal .venv/bin/python database.py
+```
+
+`database.py` 会读取 backend `.env`，创建 `news`、`banners`、`announcements`、`tools` 和 `admins` 表。仅当 `admins` 为空且管理员环境变量完整时才创建初始管理员；重复执行不会重复创建。
+
+确认数据库权限：
+
+```bash
+sudo chown aiportal:aiportal /opt/ai-portal/data/ai_portal.db
+sudo chmod 600 /opt/ai-portal/data/ai_portal.db
+```
+
+## 7. 构建前端生产文件
+
+生产环境使用同源相对 API `/api`：
+
+```bash
+cd /opt/ai-portal/frontend
+sudo -u aiportal cp .env.production.example .env.production
+sudo -u aiportal npm install
+sudo -u aiportal npm run build
+```
+
+构建前编辑 `frontend/.env.production`，配置公开的 Dify iframe Embed 地址：
+
+```dotenv
+VITE_API_BASE_URL=/api
+VITE_DIFY_EMBED_URL=https://your-dify-host/chatbot/your-app-id
+```
+
+`VITE_DIFY_EMBED_URL` 只决定浏览器在 `/assistant` 页面直接加载哪个 iframe，不经过 FastAPI 代理。所有 `VITE_` 环境变量都会被编译到浏览器前端，不是秘密存储机制，禁止在其中保存 API Key、Token、Cookie 或密码。
+
+确认以下文件存在：
+
+```bash
+test -f dist/index.html
+test -f dist/tools/qstart/index.html
+```
+
+`.env.production` 只包含公开构建配置，不应包含密码或后端 Secret。
+
+## 8. 配置 Nginx
+
+复制模板并检查静态目录：
+
+```bash
+sudo cp /opt/ai-portal/deploy/nginx/ai-portal.conf.example /etc/nginx/sites-available/ai-portal
+sudo ln -s /etc/nginx/sites-available/ai-portal /etc/nginx/sites-enabled/ai-portal
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+模板使用 `server_name _;`。正式使用域名时可替换为实际域名；HTTPS 证书配置不在本阶段范围内。SPA 路由由 `try_files` 回退到 `index.html`，QsTArT 继续作为 `/tools/qstart/index.html` 静态文件提供。
+
+Banner 图片上传后端的单文件业务限制为 5 MB，Nginx 模板在 `server` 级同步设置 `client_max_body_size 5m;`。如果未配置，请求可能在到达 FastAPI 前被 Nginx 默认请求体限制拒绝，并返回 HTTP 413。
+
+生产环境修改 Nginx 配置后，先检查配置再平滑重载：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+`/uploads/` 通过 Nginx `alias` 映射到 `/opt/ai-portal/uploads/`，其中 Banner 和新闻图片分别保存在 `uploads/banners` 与 `uploads/news`。该目录必须作为持久化数据单独保留，更新代码或重新构建前端时不得覆盖。
+
+## 9. 配置 systemd
+
+```bash
+sudo cp /opt/ai-portal/deploy/systemd/ai-portal.service.example /etc/systemd/system/ai-portal.service
+sudo systemctl daemon-reload
+sudo systemctl enable ai-portal
+sudo systemctl start ai-portal
+```
+
+生产 Uvicorn 不使用 `--reload`，只监听服务器本机：
+
+```text
+127.0.0.1:8000
+```
+
+## 10. 验证服务
+
+在服务器本机验证 FastAPI：
+
+```bash
+curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:8000/api/news
+```
+
+健康接口应返回：
+
+```json
+{"status":"ok"}
+```
+
+再通过 Nginx 地址验证门户、登录、新闻、工具及 QsTArT。生产浏览器只访问 Nginx，不直接访问端口 8000。
+
+## 11. 查看日志
+
+FastAPI/Uvicorn 日志进入 systemd journal：
+
+```bash
+sudo systemctl status ai-portal
+sudo journalctl -u ai-portal
+sudo journalctl -u ai-portal -f
+```
+
+Nginx 使用系统默认 `access.log` 和 `error.log`，常见位置为 `/var/log/nginx/`。
+
+## 12. 手动备份 SQLite
+
+备份脚本使用 Python `sqlite3.Connection.backup()`，可以在服务运行时获得一致备份，不要把直接复制正在写入的数据库作为唯一备份方案。
+
+```bash
+cd /opt/ai-portal
+sudo -u aiportal backend/.venv/bin/python deploy/scripts/backup_db.py \
+  --backup-dir /opt/ai-portal/backups
+```
+
+输出文件类似：
+
+```text
+/opt/ai-portal/backups/ai_portal_20260923_220000.db
+```
+
+未来如需定时备份，可由系统管理员在确认保留周期后配置 cron 或 systemd timer；本项目当前不自动创建定时任务。
+
+## 13. 更新版本
+
+更新前先备份数据库：
+
+```bash
+cd /opt/ai-portal
+sudo -u aiportal backend/.venv/bin/python deploy/scripts/backup_db.py \
+  --backup-dir /opt/ai-portal/backups
+```
+
+然后更新代码和依赖：
+
+```bash
+sudo systemctl stop ai-portal
+cd /opt/ai-portal
+sudo -u aiportal git pull --ff-only
+sudo -u aiportal backend/.venv/bin/python -m pip install -r backend/requirements.txt
+cd frontend
+sudo -u aiportal npm install
+sudo -u aiportal npm run build
+sudo systemctl start ai-portal
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+最后重新执行健康检查和主要页面回归。
+
+## 14. 回滚
+
+1. 停止 FastAPI：`sudo systemctl stop ai-portal`。
+2. 将代码切回已确认可用的发布版本。
+3. 仅在确认数据库变更不兼容且确实需要时，保留当前数据库副本后再从备份恢复。
+4. 检查 `/opt/ai-portal/data/ai_portal.db` 的所有者和权限。
+5. 重新安装对应版本依赖、构建前端并启动服务。
+6. 检查 `/api/health`、日志和门户主要路径。
+
+恢复数据库前必须确认备份时间和业务影响，避免覆盖仍需保留的新数据。

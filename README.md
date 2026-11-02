@@ -2,19 +2,6 @@
 
 信息运维部智能助手平台。
 
-## UI 设计文档
-
-- [当前设计规范](docs/design/DESIGN_SYSTEM.md)：按模块记录源码中的配色、字体、布局、组件及交互规则。
-- [现有设计审计](docs/design/DESIGN_AUDIT.md)：页面差异、重复样式、硬编码及待验证事项；仅记录，不实施改造。
-- [未来风格探索](docs/design/STYLE_EXPLORATIONS.md)：预留候选方案，不自动覆盖当前规范。
-- Codex 涉及 UI 开发时按根目录 [AGENTS.md](AGENTS.md) 按需查阅；纯后端任务不要求读取整套文档。
-
-以上基线建立于 2026-11-01，依据当前工作区静态源码，未替代浏览器视觉验收；下文历史版本记录保留原文。
-
-当前统一入口 `/login`：管理员一次登录进入门户与后台，普通员工使用门户；当前不强制首次改密。2026-11-02 已取消服务端项目看板及其维护、导入、历史和专属授权。首页个人时间线、日历、Todo 与四象限继续保留。
-
-上线以 [部署指南](DEPLOYMENT.md)、[发布验收清单](docs/releases/release-acceptance-checklist.md) 和 [精简报告](docs/releases/slim-release-report.md) 为准：生产构建必须显式 `VITE_API_BASE_URL=/api`，受保护 uploads/QsTArT 不能由公开静态路径绕过认证。下方早期版本记录不代表当前发布流程。
-
 技术栈：
 
 - Vue 3

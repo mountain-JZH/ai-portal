@@ -5,14 +5,14 @@ import { createSSRApp } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
+const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
 after(() => server.close())
 const { default: Header } = await server.ssrLoadModule('/src/components/AppHeader.vue')
 
 async function renderHeader(path) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: ['/', '/news', '/news/:id', '/exchange', '/tools', '/assistant', '/admin', '/admin/employees'].map((path) => ({
+    routes: ['/', '/news', '/news/:id', '/exchange', '/tools', '/assistant', '/admin'].map((path) => ({
       path, component: { template: '<div />' },
     })),
   })
@@ -26,7 +26,7 @@ test('header exposes only available navigation in the agreed order', async () =>
   assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((match) => match[1]), [
     '/', '/news', '/exchange', '/tools', '/admin',
   ])
-  assert.doesNotMatch(html, /平台公告|brand-logo|href="\/admin\/projects"/)
+  assert.doesNotMatch(html, /平台公告|brand-logo|\/projects/)
   assert.match(html, /AI <span\b[^>]*class="portal-word"[^>]*>PORTAL<\/span>/)
   assert.match(html, /aria-label="信息运维部智能助手平台，返回首页"/)
   assert.match(html, /nav-item-admin/)
@@ -44,7 +44,7 @@ test('editorial header keeps Chinese brand, navigation and English signature in 
   assert.ok(html.indexOf('</nav>') < html.indexOf(signature))
 })
 
-for (const [path, target] of [['/', '/'], ['/news', '/news'], ['/news/123', '/news'], ['/admin/employees', '/admin'], ['/exchange', '/exchange'], ['/tools', '/tools']]) {
+for (const [path, target] of [['/', '/'], ['/news', '/news'], ['/news/123', '/news'], ['/exchange', '/exchange'], ['/tools', '/tools']]) {
   test(`${path} highlights only ${target} with an accessible current-page marker`, async () => {
     const html = await renderHeader(path)
     const links = [...html.matchAll(/<a\b[^>]*class="[^"]*nav-link[^>]*>/g)].map((match) => match[0])

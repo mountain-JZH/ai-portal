@@ -1,14 +1,15 @@
+import { shallowRef } from 'vue'
+
 import { API_BASE_URL } from '../config/api'
-import { currentAdmin } from './authState'
-import { employeeFetch, loginEmployee, logoutEmployee } from './employeeAuth'
-export { currentAdmin } from './authState'
+
+export const currentAdmin = shallowRef(null)
 
 export async function fetchCurrentAdmin() {
-  const response = await employeeFetch(`${API_BASE_URL}/api/auth/me`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
     credentials: 'include',
   })
 
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     currentAdmin.value = null
     return null
   }
@@ -20,15 +21,30 @@ export async function fetchCurrentAdmin() {
 }
 
 export async function loginAdmin(credentials) {
-  return loginEmployee(credentials)
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  })
+
+  if (response.ok) currentAdmin.value = await response.json()
+
+  return response
 }
 
 export async function logoutAdmin() {
-  return logoutEmployee()
+  const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+
+  currentAdmin.value = null
+  return response
 }
 
 export async function adminFetch(input, init = {}) {
-  const response = await employeeFetch(input, {
+  const response = await fetch(input, {
     ...init,
     credentials: 'include',
   })
@@ -36,8 +52,7 @@ export async function adminFetch(input, init = {}) {
   if (response.status === 401) {
     currentAdmin.value = null
 
-    const detail = (await response.clone().json().catch(() => null))?.detail
-    if (typeof window !== 'undefined' && detail?.code !== 'EMPLOYEE_AUTH_REQUIRED' && window.location.pathname.startsWith('/admin')) {
+    if (window.location.pathname.startsWith('/admin')) {
       const redirect = `${window.location.pathname}${window.location.search}`
       window.location.assign(`/login?redirect=${encodeURIComponent(redirect)}`)
     }
