@@ -24,8 +24,6 @@ from news_api import (
 )
 from tools_api import admin_router as tools_admin_router, router as tools_router
 from upload_api import UPLOAD_ROOT, router as upload_router
-from projects_api import ProjectImportBodyLimit, router as projects_router, employee_router as employee_projects_router
-from project_write_api import router as project_write_router
 from employee_api import router as employee_router, admin_router as employee_admin_router
 from employee_security import EMPLOYEE_TTL
 from portal_access import PortalAccess
@@ -75,10 +73,6 @@ if qstart_directory.is_dir():
 app.include_router(auth_router)
 app.include_router(employee_router)
 app.include_router(employee_admin_router)
-app.include_router(projects_router)
-app.include_router(employee_projects_router)
-app.include_router(project_write_router)
-app.add_middleware(ProjectImportBodyLimit)
 app.include_router(news_router)
 app.include_router(news_admin_router)
 app.include_router(banner_router)

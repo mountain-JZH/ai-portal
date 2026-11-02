@@ -69,6 +69,7 @@ frontend/.env.*
 *.log
 logs/
 backups/
+/artifacts/project-removal/*.tar.gz
 .cache/
 .pytest_cache/
 .ruff_cache/

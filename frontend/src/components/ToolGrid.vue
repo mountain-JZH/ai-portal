@@ -1,7 +1,7 @@
 <script setup>
 import { employeeFetch as fetch } from '../utils/employeeAuth'
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
 import SectionMasthead from './SectionMasthead.vue'
@@ -44,6 +44,7 @@ const statusLabels = {
 }
 
 const tools = ref([])
+const router = useRouter()
 const loading = ref(!props.previewTool)
 const errorMessage = ref('')
 const placeholderCards = [1, 2, 3, 4, 5]
@@ -53,7 +54,8 @@ function isSafeRoute(target) {
   return (
     typeof target === 'string' &&
     target.startsWith('/') &&
-    !target.startsWith('//')
+    !target.startsWith('//') &&
+    router.resolve(target).matched.length > 0
   )
 }
 

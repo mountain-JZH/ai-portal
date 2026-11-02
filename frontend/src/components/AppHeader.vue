@@ -15,7 +15,6 @@ async function exitEmployee() {
 const navigation = [
   { label: '首页', to: '/', enabled: true },
   { label: '新闻动态', to: '/news', enabled: true },
-  { label: '项目看板', to: '/projects', enabled: true },
   { label: '互通有无', to: '/exchange', enabled: true },
   { label: 'AI 工具', to: '/tools', enabled: true },
   { label: '后台', to: '/admin', enabled: true, admin: true },

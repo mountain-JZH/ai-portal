@@ -34,7 +34,6 @@ class EmployeeUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     department: str = Field(min_length=1, max_length=100)
     isActive: bool = True
-    canEditProjects: bool = False
 
     @field_validator("name", "department")
     @classmethod
@@ -170,9 +169,9 @@ def create_employee(payload: EmployeeCreate):
             if connection.execute('SELECT 1 FROM admins WHERE lower(username)=?', (payload.username.lower(),)).fetchone():
                 raise HTTPException(409, '账号属于现有管理员，请使用统一登录，不可创建重名员工')
             cursor = connection.execute(
-                "INSERT INTO employees(username,name,department,password_hash,is_active,can_edit_projects,must_change_password) VALUES(?,?,?,?,?,?,0)",
+                "INSERT INTO employees(username,name,department,password_hash,is_active,must_change_password) VALUES(?,?,?,?,?,0)",
                 (payload.username.lower(), payload.name, payload.department, hash_password(payload.temporaryPassword),
-                 int(payload.isActive), int(payload.canEditProjects)),
+                 int(payload.isActive)),
             )
             return employee_response(employee_row(connection, cursor.lastrowid))
     except sqlite3.IntegrityError as error:
@@ -186,8 +185,8 @@ def update_employee(employee_id: int, payload: EmployeeUpdate, request: Request)
         raise HTTPException(400, "不能停用当前正在管理的员工账号")
     with closing(get_db_connection()) as connection, connection:
         employee_row(connection, employee_id)
-        connection.execute("UPDATE employees SET name=?,department=?,is_active=?,can_edit_projects=? WHERE id=?",
-                           (payload.name, payload.department, int(payload.isActive), int(payload.canEditProjects), employee_id))
+        connection.execute("UPDATE employees SET name=?,department=?,is_active=? WHERE id=?",
+                           (payload.name, payload.department, int(payload.isActive), employee_id))
         if not payload.isActive:
             connection.execute("UPDATE employees SET auth_version=auth_version+1 WHERE id=?", (employee_id,))
             connection.execute("DELETE FROM employee_sessions WHERE employee_id=?", (employee_id,))

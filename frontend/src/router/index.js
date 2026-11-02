@@ -25,23 +25,6 @@ const router = createRouter({
 
   routes: [
     {
-      path: '/projects/new',
-      name: 'project-new',
-      component: () => import('../views/ProjectEditView.vue'),
-      meta: { requiresProjectEditor: true },
-    },
-    {
-      path: '/projects/:id/edit',
-      name: 'project-edit',
-      component: () => import('../views/ProjectEditView.vue'),
-      meta: { requiresProjectEditor: true },
-    },
-    {
-      path: '/projects',
-      name: 'projects',
-      component: () => import('../views/ProjectsView.vue'),
-    },
-    {
       path: '/',
       name: 'home',
       component: HomeView,
@@ -91,11 +74,6 @@ const router = createRouter({
           path: 'employees',
           name: 'employees-admin',
           component: () => import('../views/EmployeesAdminView.vue'),
-        },
-        {
-          path: 'projects',
-          name: 'projects-admin',
-          component: () => import('../views/ProjectsAdminView.vue'),
         },
         {
           path: 'exchange',

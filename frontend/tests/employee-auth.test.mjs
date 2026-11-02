@@ -13,11 +13,11 @@ const { resolveAccess } = await server.ssrLoadModule('/src/utils/routeAccess.js'
 const route = (name, fullPath, admin = false, query = {}) => ({ name, fullPath, query, matched: [{ meta: { requiresAdmin: admin } }] })
 
 test('all routes require login; admin access follows the single server-provided identity', async () => {
-  for (const path of ['/', '/news', '/news/1', '/exchange', '/tools', '/assistant', '/projects', '/admin']) {
+  for (const path of ['/', '/news', '/news/1', '/exchange', '/tools', '/assistant', '/admin']) {
     const result = await resolveAccess(route('test', path, path === '/admin'), { employee: async () => null })
     assert.equal(result.name, 'login'); assert.equal(result.query.redirect, path)
   }
-  const employee = async () => ({ id: 1, mustChangePassword: false, canEditProjects: true, isAdmin: false })
+  const employee = async () => ({ id: 1, mustChangePassword: false, isAdmin: false })
   const checks = { employee, admin: async () => { throw new Error('No second authentication should run') } }
   assert.equal(await resolveAccess(route('home', '/'), checks), true)
   assert.equal((await resolveAccess(route('admin', '/admin', true), checks)).name, 'home')
@@ -82,7 +82,7 @@ test('logout from admin clears the same employee identity', async () => {
 test('employee editor renders password-only inputs and real account/permission fields', async () => {
   const { default: Editor } = await server.ssrLoadModule('/src/views/EmployeesAdminView.vue')
   const html = await renderToString(createSSRApp(Editor))
-  assert.match(html, /员工账号管理/); assert.match(html, /项目维护权限/)
+  assert.match(html, /员工账号管理/); assert.doesNotMatch(html, /项目维护权限/)
   assert.match(html, /type="password"/); assert.match(html, /autocomplete="new-password"/)
   assert.doesNotMatch(html, /公开注册|默认密码/)
 })
@@ -93,14 +93,14 @@ test('one login response populates employee and admin roles without another cred
   state.csrfToken.value = 'before-login'
   globalThis.fetch = async (url, options) => {
     calls.push([url, options.method])
-    return new Response(JSON.stringify({ id: 7, isAdmin: true, canEditProjects: true,
+    return new Response(JSON.stringify({ id: 7, isAdmin: true,
       mustChangePassword: false, admin: { id: 2, username: 'adminMO' }, csrfToken: 'after-login' }))
   }
   try {
     await auth.loginEmployee({ username: 'adminMO', password: 'synthetic-test-only' })
     assert.equal(calls.length, 1)
     assert.match(calls[0][0], /\/api\/employee\/login$/)
-    assert.equal(state.currentEmployee.value.canEditProjects, true)
+    assert.equal(state.currentEmployee.value.isAdmin, true)
     assert.equal(state.currentAdmin.value.username, 'adminMO')
     assert.equal(state.csrfToken.value, 'after-login')
     assert.equal(await resolveAccess(route('admin', '/admin', true), { employee: async () => state.currentEmployee.value }), true)

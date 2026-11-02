@@ -5,14 +5,14 @@ import { createSSRApp } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
 after(() => server.close())
 const { default: Header } = await server.ssrLoadModule('/src/components/AppHeader.vue')
 
 async function renderHeader(path) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: ['/', '/news', '/news/:id', '/projects', '/exchange', '/tools', '/assistant', '/admin', '/admin/projects'].map((path) => ({
+    routes: ['/', '/news', '/news/:id', '/exchange', '/tools', '/assistant', '/admin', '/admin/employees'].map((path) => ({
       path, component: { template: '<div />' },
     })),
   })
@@ -24,7 +24,7 @@ test('header exposes only available navigation in the agreed order', async () =>
   const html = await renderHeader('/')
   const nav = html.match(/<nav\b[\s\S]*?<\/nav>/)?.[0] || ''
   assert.deepEqual([...nav.matchAll(/href="([^"]+)"/g)].map((match) => match[1]), [
-    '/', '/news', '/projects', '/exchange', '/tools', '/admin',
+    '/', '/news', '/exchange', '/tools', '/admin',
   ])
   assert.doesNotMatch(html, /平台公告|brand-logo|href="\/admin\/projects"/)
   assert.match(html, /AI <span\b[^>]*class="portal-word"[^>]*>PORTAL<\/span>/)
@@ -44,7 +44,7 @@ test('editorial header keeps Chinese brand, navigation and English signature in 
   assert.ok(html.indexOf('</nav>') < html.indexOf(signature))
 })
 
-for (const [path, target] of [['/', '/'], ['/news', '/news'], ['/news/123', '/news'], ['/projects', '/projects'], ['/admin/projects', '/admin'], ['/exchange', '/exchange'], ['/tools', '/tools']]) {
+for (const [path, target] of [['/', '/'], ['/news', '/news'], ['/news/123', '/news'], ['/admin/employees', '/admin'], ['/exchange', '/exchange'], ['/tools', '/tools']]) {
   test(`${path} highlights only ${target} with an accessible current-page marker`, async () => {
     const html = await renderHeader(path)
     const links = [...html.matchAll(/<a\b[^>]*class="[^"]*nav-link[^>]*>/g)].map((match) => match[0])

@@ -6,7 +6,7 @@ import { renderToString } from '@vue/server-renderer'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 // Compile the actual Vue components without listening on a server port.
-const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
+const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
 after(() => server.close())
 const { default: Masthead } = await server.ssrLoadModule('/src/components/SectionMasthead.vue')
 const { default: Chevron } = await server.ssrLoadModule('/src/components/ChevronRight.vue')
@@ -93,6 +93,14 @@ async function renderToolCards(home, fixtures = toolFixtures, extraProps = {}, f
   await router.push('/tools')
   return renderToString(createSSRApp(SeededGrid, { home, detailed: !home, ...extraProps }).use(router))
 }
+
+test('persisted actions to unregistered routes cannot expose a retired feature entry', async () => {
+  const html = await renderToolCards(true, [
+    { ...toolFixtures[0], actionTarget: '/projects', title: 'Retired entry' },
+  ])
+  assert.doesNotMatch(html, /href="\/projects"/)
+  assert.match(html, /aria-disabled="true"/)
+})
 
 test('home tools keep API order, show four, and have one valid entry per available card', async () => {
   const html = await renderToolCards(true)

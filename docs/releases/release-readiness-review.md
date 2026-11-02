@@ -1,5 +1,7 @@
 # AI Portal V1.8 发布准备审查（历史记录）
 
+> 已被 2026-11-02 精简版流程取代。本文保留为历史审查快照，不可作为新候选、上线或清理的执行依据。当前见 [精简报告](slim-release-report.md) 与 [ECS 手册](ecs-deployment-runbook.md)。
+
 > 本文主体保留 2026-10-19 的历史观察与计数，不是当前发布指令或放行结论。2026-10-21 当前流程以 [DEPLOYMENT.md](../../DEPLOYMENT.md)、[当前验收清单](release-acceptance-checklist.md)、[精确拟暂存清单](git-staging-plan.md) 为准：/login 单次登录，服务端角色授权；受保护 API 未登录 401；uploads/QsTArT 经认证代理。当前不强制首次改密。生产 Exchange 开关必须单独确认，不按历史分批建议自动改值。
 
 审查日期：2026-10-19。对象：`D:\workspace\ai-portal` 当前工作区，而非已经发布的 ECS。

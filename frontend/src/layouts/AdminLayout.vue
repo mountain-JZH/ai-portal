@@ -16,7 +16,6 @@ const isAnnouncementActive = computed(() =>
 )
 const isToolActive = computed(() => route.path.startsWith('/admin/tools'))
 const isExchangeActive = computed(() => route.path.startsWith('/admin/exchange'))
-const isProjectsActive = computed(() => route.path.startsWith('/admin/projects'))
 
 async function handleLogout() {
   try {
@@ -27,7 +26,7 @@ async function handleLogout() {
 </script>
 
 <template>
-  <div class="admin-layout" :class="{ 'projects-admin-layout': isProjectsActive }">
+  <div class="admin-layout">
     <header class="admin-header">
       <div class="admin-header-inner">
         <RouterLink to="/admin" class="admin-brand">
@@ -106,10 +105,6 @@ async function handleLogout() {
             <RouterLink to="/admin/exchange" class="admin-nav-link admin-nav-child" :class="{ active: isExchangeActive }">互通有无管理</RouterLink>
           </div>
 
-          <div class="admin-nav-group">
-            <span class="admin-nav-label">市场部项目</span>
-            <RouterLink to="/admin/projects" class="admin-nav-link admin-nav-child" :class="{ active: isProjectsActive }">项目推进看板</RouterLink>
-          </div>
 
           <div class="admin-nav-group">
             <span class="admin-nav-label">账号管理</span>
@@ -140,10 +135,6 @@ async function handleLogout() {
     var(--color-bg);
 }
 
-.projects-admin-layout { background: #f5f6f7; }
-.projects-admin-layout .admin-brand-mark { background: #f7b334; color: #22292c; box-shadow: none; }
-.projects-admin-layout .admin-brand-copy small { color: #6d5b55; }
-.projects-admin-layout .admin-nav-link.active { background: #fff1d6; color: #22292c; border-color: #f7b334; }
 
 .admin-header {
   min-height: 68px;

@@ -5,7 +5,7 @@ import { adminFetch } from '../utils/adminAuth'
 
 const employees = ref([]), loading = ref(true), busy = ref(false), error = ref(''), message = ref('')
 const editing = ref(null), resetting = ref(null), temporaryPassword = ref('')
-const empty = () => ({ username: '', name: '', department: '', isActive: true, canEditProjects: false, temporaryPassword: '' })
+const empty = () => ({ username: '', name: '', department: '', isActive: true, temporaryPassword: '' })
 const form = reactive(empty())
 async function request(path = '', init) {
   const response = await adminFetch(`${API_BASE_URL}/api/admin/employees${path}`, init)
@@ -20,7 +20,7 @@ async function load() {
 }
 function edit(employee) {
   editing.value = employee.id
-  Object.assign(form, empty(), { username: employee.username, name: employee.name, department: employee.department, isActive: employee.isActive, canEditProjects: employee.canEditProjects })
+  Object.assign(form, empty(), { username: employee.username, name: employee.name, department: employee.department, isActive: employee.isActive })
   message.value = ''; error.value = ''
 }
 function cancel() { editing.value = null; Object.assign(form, empty()) }
@@ -51,7 +51,7 @@ onMounted(load)
 </script>
 <template>
   <section class="employees-admin">
-    <h1>员工账号管理</h1><p>统一登录后自动识别权限；项目维护授权不授予系统管理权限。</p>
+    <h1>员工账号管理</h1><p>统一登录后自动识别管理员和普通员工身份。</p>
     <p v-if="error" role="alert">{{ error }}</p><p v-if="message" role="status">{{ message }}</p>
     <form class="employee-editor" @submit.prevent="save">
       <h2>{{ editing ? '编辑员工' : '添加员工' }}</h2>
@@ -60,7 +60,6 @@ onMounted(load)
       <label>部门<input v-model="form.department" required maxlength="100" :disabled="busy"></label>
       <label v-if="!editing">一次性初始密码<input v-model="form.temporaryPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="128" :disabled="busy"></label>
       <label class="employee-check"><input v-model="form.isActive" type="checkbox" :disabled="busy">启用账号（停用立即撤销全部会话）</label>
-      <label class="employee-check"><input v-model="form.canEditProjects" type="checkbox" :disabled="busy">项目维护权限</label>
       <div><button :disabled="busy">{{ busy ? '保存中…' : '保存账号' }}</button> <button v-if="editing" type="button" :disabled="busy" @click="cancel">取消编辑</button></div>
     </form>
     <form v-if="resetting" class="employee-editor" @submit.prevent="reset">
@@ -70,7 +69,7 @@ onMounted(load)
     </form>
     <p v-if="loading" role="status">正在读取员工账号…</p>
     <div v-else class="employee-table"><table><thead><tr><th>账号 / 姓名</th><th>部门</th><th>状态 / 权限</th><th>最近登录</th><th>操作</th></tr></thead><tbody>
-      <tr v-for="employee in employees" :key="employee.id"><td>{{ employee.username }}<br>{{ employee.name }}</td><td>{{ employee.department }}</td><td>{{ employee.isActive ? '启用' : '停用' }} · {{ employee.isAdmin ? '管理员' : employee.canEditProjects ? '可维护项目' : '普通员工' }}</td><td>{{ employee.lastLoginAt ? new Date(employee.lastLoginAt).toLocaleString('zh-CN') : '尚未登录' }}</td><td><button @click="edit(employee)">编辑</button> <button @click="resetting = employee; temporaryPassword = ''">重置密码</button></td></tr>
+      <tr v-for="employee in employees" :key="employee.id"><td>{{ employee.username }}<br>{{ employee.name }}</td><td>{{ employee.department }}</td><td>{{ employee.isActive ? '启用' : '停用' }} · {{ employee.isAdmin ? '管理员' : '普通员工' }}</td><td>{{ employee.lastLoginAt ? new Date(employee.lastLoginAt).toLocaleString('zh-CN') : '尚未登录' }}</td><td><button @click="edit(employee)">编辑</button> <button @click="resetting = employee; temporaryPassword = ''">重置密码</button></td></tr>
       <tr v-if="!employees.length"><td colspan="5">暂无员工账号</td></tr>
     </tbody></table></div>
   </section>

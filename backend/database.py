@@ -4,7 +4,6 @@ from pathlib import Path
 
 from auth_security import hash_password
 from dotenv import load_dotenv
-from project_data import init_project_tables
 
 
 # backend 文件夹路径
@@ -46,7 +45,7 @@ def get_db_connection():
 def init_database():
     """
     初始化数据库。
-    在现有数据库中补齐项目所需的数据表。
+    在现有数据库中补齐当前业务所需的数据表，保留历史表和字段。
     """
 
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -199,7 +198,6 @@ def init_database():
                 department TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
-                can_edit_projects INTEGER NOT NULL DEFAULT 0 CHECK(can_edit_projects IN (0,1)),
                 must_change_password INTEGER NOT NULL DEFAULT 1 CHECK(must_change_password IN (0,1)),
                 auth_version INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -220,8 +218,6 @@ def init_database():
                 attempts INTEGER NOT NULL
             );
         """)
-
-        init_project_tables(connection)
 
         # Preserve both identity tables and IDs; never infer admin status from a username.
         employee_columns = {row['name'] for row in connection.execute('PRAGMA table_info(employees)')}

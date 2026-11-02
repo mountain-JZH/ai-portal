@@ -62,12 +62,6 @@ class EmployeeAuthTests(unittest.TestCase):
         cls.dbpatch = patch.object(database, 'DATABASE_PATH', cls.root/'test.db'); cls.dbpatch.start()
         cls.uploadpatch = patch.object(upload_api, 'UPLOAD_ROOT', cls.root/'uploads'); cls.uploadpatch.start()
         import main
-        from employee_security import require_project_editor
-        from fastapi import Depends
-        # Test-only route exercises the future permission dependency, not project business APIs.
-        @main.app.post('/api/test-project-permission', dependencies=[Depends(require_project_editor)])
-        def permission_probe():
-            return {'allowed': True}
         cls.app, cls.db = main.app, database
         cls.password_hash = hash_password('initial-test-password')
         (cls.root/'uploads/news').mkdir(parents=True)
@@ -89,8 +83,8 @@ class EmployeeAuthTests(unittest.TestCase):
 
     def test_deny_all_anonymous_registered_business_routes_and_attachments(self):
         for path in ['/api/news', '/api/banners', '/api/announcements', '/api/tools', '/api/section-visuals',
-                     '/api/exchange', '/api/admin/projects', '/api/hello', '/api/auth/me',
-                     '/api/admin/employees', '/uploads/news/sample.txt', '/tools/qstart/index.html', '/api/projects']:
+                     '/api/exchange', '/api/hello', '/api/auth/me',
+                     '/api/admin/employees', '/uploads/news/sample.txt', '/tools/qstart/index.html']:
             self.assertEqual(self.client.request('GET', path)[0], 401, path)
         self.assertEqual(self.client.request('GET', '/api/health')[0], 200)
         self.assertEqual(self.client.request('POST', '/api/chat', {'message': 'test'})[0], 401)
@@ -137,22 +131,19 @@ class EmployeeAuthTests(unittest.TestCase):
 
     def test_admin_management_permissions_disable_and_password_reset(self):
         self.client.login(); self.client.admin()
-        fields = {'username': 'another', 'name': 'Another', 'department': 'Market', 'temporaryPassword': 'temporary-test-password', 'canEditProjects': True}
+        fields = {'username': 'another', 'name': 'Another', 'department': 'Market', 'temporaryPassword': 'temporary-test-password'}
         status, created = self.client.request('POST', '/api/admin/employees', fields)
         self.assertEqual(status, 201); self.assertNotIn('password_hash', created)
         self.assertEqual(self.client.request('POST', '/api/admin/employees', fields)[0], 409)
         other = Client(self.app); self.assertEqual(other.login('another', 'temporary-test-password')[0], 200)
         other.request('POST', '/api/employee/password', {'currentPassword': 'temporary-test-password', 'newPassword': 'personal-test-password'})
-        self.assertEqual(other.request('POST', '/api/test-project-permission')[0], 200)
         self.assertEqual(other.request('GET', '/api/admin/employees')[0], 403)
         self.assertEqual(other.request('POST', '/api/admin/employees', fields)[0], 403)
-        self.assertEqual(self.client.request('POST', '/api/test-project-permission')[0], 200)
-        self.client.request('PUT', f"/api/admin/employees/{created['id']}", {'name': 'Renamed', 'department': 'Market', 'canEditProjects': False, 'isActive': True})
-        self.assertEqual(other.request('POST', '/api/test-project-permission')[0], 403)
+        self.client.request('PUT', f"/api/admin/employees/{created['id']}", {'name': 'Renamed', 'department': 'Market', 'isActive': True})
         self.assertEqual(self.client.request('POST', f"/api/admin/employees/{created['id']}/reset-password", {'temporaryPassword': 'reset-test-password'})[0], 200)
         self.assertEqual(other.request('GET', '/api/news')[0], 401)
         self.assertFalse(other.login('another', 'reset-test-password')[1]['mustChangePassword'])
-        self.client.request('PUT', f"/api/admin/employees/{created['id']}", {'name': 'Another', 'department': 'Market', 'canEditProjects': False, 'isActive': False})
+        self.client.request('PUT', f"/api/admin/employees/{created['id']}", {'name': 'Another', 'department': 'Market', 'isActive': False})
         self.assertEqual(other.request('GET', '/api/employee/me')[0], 401)
 
     def test_csrf_login_and_multipart_origin_checks(self):
@@ -228,6 +219,49 @@ class EmployeeAuthTests(unittest.TestCase):
         self.db.init_database(); self.db.init_database()
         self.assertEqual(before, {name: [tuple(row) for row in self.sql(f'SELECT * FROM {name}')] for name in tables})
         self.assertEqual(self.client.request('GET', '/api/admin/news')[0], 200)
+
+    def test_removed_board_has_no_registered_routes_or_openapi_operations(self):
+        self.client.login()
+        paths = ['/api/projects', '/api/projects/1', '/api/projects/1/history',
+                 '/api/admin/projects', '/api/admin/projects/import/preview']
+        for path in paths:
+            for method in ['GET', 'POST', 'PUT', 'DELETE']:
+                self.assertEqual(self.client.request(method, path)[0], 404, (method, path))
+        self.assertFalse(any('projects' in getattr(route, 'path', '') for route in self.app.routes))
+        self.assertFalse(any('projects' in path for path in self.app.openapi()['paths']))
+        self.assertNotIn('canEditProjects', self.client.request('GET', '/api/employee/me')[1])
+
+    def test_fresh_schema_and_legacy_data_survive_repeated_initialization(self):
+        with tempfile.TemporaryDirectory(prefix='slim-schema-') as directory:
+            with patch.object(self.db, 'DATABASE_PATH', Path(directory)/'isolated.db'):
+                self.db.init_database()
+                with closing(self.db.get_db_connection()) as c, c:
+                    names = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                    self.assertFalse(any(name.startswith('project') for name in names))
+                    self.assertNotIn('can_edit_projects', {r['name'] for r in c.execute('PRAGMA table_info(employees)')})
+                    # Historical objects remain opaque to the new application.
+                    c.execute('ALTER TABLE employees ADD COLUMN can_edit_projects INTEGER NOT NULL DEFAULT 0')
+                    c.execute('CREATE TABLE projects(id INTEGER PRIMARY KEY, data TEXT)')
+                    c.execute("INSERT INTO projects VALUES(17, 'historical opaque payload')")
+                    c.execute("INSERT INTO employees(username,name,department,password_hash,can_edit_projects) VALUES('legacy','Legacy','Tests',?,1)", (self.password_hash,))
+                    for table in ['news', 'banners', 'announcements', 'tools']:
+                        c.execute(f"INSERT INTO {table}(title) VALUES('retained content')")
+                    tables = ['projects', 'employees', 'admins', 'news', 'banners', 'announcements', 'tools']
+                    before = {t: [tuple(r) for r in c.execute(f'SELECT * FROM {t}')] for t in tables}
+                self.db.init_database(); self.db.init_database()
+                with closing(self.db.get_db_connection()) as c:
+                    after = {t: [tuple(r) for r in c.execute(f'SELECT * FROM {t}')] for t in tables}
+                    self.assertEqual(before, after)
+                    self.assertEqual(c.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
+
+    def test_assistant_proxy_contract_is_preserved(self):
+        self.client.login()
+        with patch('main.requests.post') as upstream:
+            upstream.return_value.status_code = 200
+            upstream.return_value.json.return_value = {'answer': 'synthetic assistant reply'}
+            status, body = self.client.request('POST', '/api/chat', {'message': 'synthetic question'})
+            self.assertEqual(status, 200)
+            self.assertEqual(body['answer'], 'synthetic assistant reply')
 
 
 if __name__ == '__main__':

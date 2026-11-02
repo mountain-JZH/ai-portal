@@ -17,7 +17,6 @@ def denied(code="EMPLOYEE_AUTH_REQUIRED", status=401):
         "EMPLOYEE_AUTH_REQUIRED": "请先登录员工账号",
         "ADMIN_AUTH_REQUIRED": "没有系统管理权限",
         "PASSWORD_CHANGE_REQUIRED": "首次登录或密码重置后，请先修改密码",
-        "PROJECT_EDITOR_REQUIRED": "没有项目维护权限",
     }
     return HTTPException(status, {"code": code, "message": messages[code]})
 
@@ -32,7 +31,6 @@ def employee_response(row):
     return {
         "id": row["id"], "username": row["username"], "name": row["name"],
         "department": row["department"], "isActive": bool(row["is_active"]),
-        "canEditProjects": admin or bool(row["can_edit_projects"]),
         "isAdmin": admin,
         "admin": {"id": row['admin_id'], "username": row['admin_username']} if admin else None,
         # Testing phase: keep the old column for compatibility, but do not force a second gate.
@@ -65,13 +63,6 @@ def resolve_employee(request: Request, allow_password_change=False):
 
 def get_current_employee(request: Request):
     return resolve_employee(request)
-
-
-def require_project_editor(request: Request):
-    employee = get_current_employee(request)
-    if not employee["can_edit_projects"] and not (employee['admin_id'] and employee['admin_active']):
-        raise denied("PROJECT_EDITOR_REQUIRED", 403)
-    return employee
 
 
 def start_employee_session(request, employee, connection):
