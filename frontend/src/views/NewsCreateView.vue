@@ -1,8 +1,9 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import NewsPreview from '../components/NewsPreview.vue'
 import { adminFetch } from '../utils/adminAuth'
 
 function getLocalDate() {
@@ -26,6 +27,10 @@ const form = reactive({
   is_published: true,
 })
 
+watch(() => form.source_type, (type) => {
+  if (type === '新能源行业早报') form.is_published = false
+})
+
 const isSubmitting = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
@@ -46,7 +51,7 @@ function formatError(data, status) {
   return `提交失败（HTTP ${status}），请稍后重试`
 }
 
-async function submitNews() {
+async function submitNews(publish = form.is_published) {
   if (isSubmitting.value) return
 
   successMessage.value = ''
@@ -75,7 +80,7 @@ async function submitNews() {
         publish_date: form.publish_date,
         keywords: form.keywords,
         url: form.url,
-        is_published: form.is_published ? 1 : 0,
+        is_published: publish ? 1 : 0,
       }),
     })
 
@@ -86,7 +91,7 @@ async function submitNews() {
     }
 
     createdNewsId.value = data.id
-    successMessage.value = '新闻发布成功'
+    successMessage.value = data.is_published === 1 ? '新闻发布成功' : '草稿保存成功'
   } catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
@@ -102,12 +107,12 @@ async function submitNews() {
     <div class="page-header">
       <span>NEWS MANAGEMENT</span>
       <h1>新增新闻</h1>
-      <p>填写新闻内容并发布到门户首页。</p>
+      <p>填写新闻内容，可先保存草稿并预览，审核后再发布。</p>
     </div>
 
     <form
       class="news-form"
-      @submit.prevent="submitNews"
+      @submit.prevent="submitNews()"
     >
       <div class="form-grid">
         <label class="form-field form-field-wide">
@@ -132,11 +137,12 @@ async function submitNews() {
 
         <label class="form-field">
           <span>新闻类型</span>
-          <select v-model="form.source_type">
+          <select v-model="form.source_type" aria-label="新闻类型">
             <option value="内部动态">内部动态</option>
             <option value="行业资讯">行业资讯</option>
             <option value="AI资讯">AI资讯</option>
             <option value="通知公告">通知公告</option>
+            <option value="新能源行业早报">新能源行业早报</option>
           </select>
         </label>
 
@@ -185,6 +191,14 @@ async function submitNews() {
         </label>
       </div>
 
+      <NewsPreview
+        :title="form.title"
+        :summary="form.summary"
+        :publish-date="form.publish_date"
+        :source-type="form.source_type"
+        :content="form.content"
+      />
+
       <label class="publish-field">
         <input
           v-model="form.is_published"
@@ -203,6 +217,7 @@ async function submitNews() {
       >
         <strong>{{ successMessage }}</strong>
         <span>新闻 id：{{ createdNewsId }}</span>
+        <RouterLink :to="`/admin/news/${createdNewsId}/edit`">继续编辑与审核</RouterLink>
       </div>
 
       <div
@@ -216,11 +231,14 @@ async function submitNews() {
       <div class="form-actions">
         <RouterLink to="/admin/news">返回新闻管理</RouterLink>
 
+        <button v-if="form.is_published" type="button" :disabled="isSubmitting" @click="submitNews(false)">
+          保存草稿
+        </button>
         <button
           type="submit"
           :disabled="isSubmitting"
         >
-          {{ isSubmitting ? '正在提交...' : '发布新闻' }}
+          {{ isSubmitting ? '正在提交...' : form.is_published ? '发布新闻' : '保存草稿' }}
         </button>
       </div>
     </form>

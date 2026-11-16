@@ -10,6 +10,7 @@ import { API_BASE_URL } from '../config/api'
 
 const newsList = ref([])
 const failedImageIds = ref([])
+const newsFilter = ref('all')
 const loading = ref(true)
 const errorMessage = ref('')
 
@@ -18,6 +19,11 @@ const sortedNews = computed(() =>
     String(second.date).localeCompare(String(first.date)),
   ),
 )
+
+const filteredNews = computed(() => sortedNews.value.filter(news => {
+  const brief = news.source_type === '新能源行业早报'
+  return newsFilter.value === 'all' || (newsFilter.value === 'brief' ? brief : !brief)
+}))
 
 async function loadNews() {
   loading.value = true
@@ -81,6 +87,15 @@ onMounted(() => {
       <p>内部通知、信息宣贯及行业动态统一展示。</p>
     </div>
 
+    <label class="news-filter">
+      <span>新闻筛选</span>
+      <select v-model="newsFilter" aria-label="新闻筛选">
+        <option value="all">全部新闻</option>
+        <option value="brief">新能源行业早报</option>
+        <option value="other">其他新闻</option>
+      </select>
+    </label>
+
     <section
       v-if="loading"
       class="empty-state"
@@ -98,11 +113,11 @@ onMounted(() => {
     </section>
 
     <div
-      v-else-if="sortedNews.length"
+      v-else-if="filteredNews.length"
       class="news-grid"
     >
       <article
-        v-for="news in sortedNews"
+        v-for="news in filteredNews"
         :key="news.id"
         class="news-card"
       >
@@ -159,6 +174,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.news-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 24px; color: var(--color-text-secondary); }
+.news-filter select { max-width: 100%; padding: 9px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.news-filter select:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
 .page {
   width: calc(100% - 48px);
   max-width: 1200px;

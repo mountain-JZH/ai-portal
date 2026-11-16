@@ -8,6 +8,7 @@ import {
 import { RouterLink, useRoute } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import NewsPreview from '../components/NewsPreview.vue'
 import { adminFetch } from '../utils/adminAuth'
 
 const route = useRoute()
@@ -132,7 +133,7 @@ async function saveNews() {
     }
 
     savedNewsId.value = data.id
-    successMessage.value = '新闻修改成功'
+    successMessage.value = data.is_published === 1 ? '新闻修改成功' : '草稿保存成功'
   } catch (error) {
     errorMessage.value = error instanceof Error
       ? error.message
@@ -207,11 +208,12 @@ watch(newsId, (id) => loadNews(id), { immediate: true })
 
         <label class="form-field">
           <span>新闻类型</span>
-          <select v-model="form.source_type">
+          <select v-model="form.source_type" aria-label="新闻类型">
             <option value="内部动态">内部动态</option>
             <option value="行业资讯">行业资讯</option>
             <option value="AI资讯">AI资讯</option>
             <option value="通知公告">通知公告</option>
+            <option value="新能源行业早报">新能源行业早报</option>
           </select>
         </label>
 
@@ -259,6 +261,14 @@ watch(newsId, (id) => loadNews(id), { immediate: true })
           />
         </label>
       </div>
+
+      <NewsPreview
+        :title="form.title"
+        :summary="form.summary"
+        :publish-date="form.publish_date"
+        :source-type="form.source_type"
+        :content="form.content"
+      />
 
       <label class="publish-field">
         <input
