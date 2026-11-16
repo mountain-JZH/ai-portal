@@ -58,7 +58,7 @@ async function loadNews(id) {
 
   try {
     const response = await adminFetch(
-      `${API_BASE_URL}/api/news/${encodeURIComponent(id)}`,
+      `${API_BASE_URL}/api/admin/news/${encodeURIComponent(id)}`,
     )
 
     if (response.status === 404) {
@@ -290,7 +290,7 @@ watch(newsId, (id) => loadNews(id), { immediate: true })
 
       <div class="form-actions">
         <RouterLink to="/admin/news">返回新闻管理</RouterLink>
-        <RouterLink :to="`/news/${newsId}`">查看新闻</RouterLink>
+        <RouterLink v-if="form.is_published" :to="`/news/${newsId}`">查看新闻</RouterLink>
 
         <button
           type="submit"

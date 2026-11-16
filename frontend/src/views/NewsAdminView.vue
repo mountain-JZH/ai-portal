@@ -207,7 +207,7 @@ onMounted(() => {
             >
               <td>
                 <RouterLink
-                  :to="`/news/${news.id}`"
+                  :to="news.is_published === 1 ? `/news/${news.id}` : `/admin/news/${news.id}/edit`"
                   class="news-title"
                 >
                   {{ news.title }}

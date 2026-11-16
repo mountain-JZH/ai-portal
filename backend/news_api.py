@@ -130,6 +130,15 @@ def get_news():
 
 @router.get("/{news_id}", response_model=NewsResponse)
 def get_news_by_id(news_id: int):
+    return _read_news(news_id, published_only=True)
+
+
+@admin_router.get("/{news_id}", response_model=NewsResponse)
+def get_admin_news_by_id(news_id: int):
+    return _read_news(news_id, published_only=False)
+
+
+def _read_news(news_id: int, *, published_only: bool):
     """
     根据新闻 id 获取单条新闻。
     """
@@ -152,9 +161,9 @@ def get_news_by_id(news_id: int):
                 is_published,
                 created_at
             FROM news
-            WHERE id = ?
+            WHERE id = ? AND (? = 0 OR is_published = 1)
             """,
-            (news_id,),
+            (news_id, int(published_only)),
         ).fetchone()
     finally:
         connection.close()

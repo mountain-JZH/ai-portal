@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import NewsBody from '../components/NewsBody.vue'
 
 const route = useRoute()
 const news = ref(null)
@@ -40,10 +41,7 @@ async function loadNews(newsId) {
         .split(',')
         .map((keyword) => keyword.trim())
         .filter(Boolean),
-      content: String(data.content || '')
-        .split(/\r?\n/)
-        .map((paragraph) => paragraph.trim())
-        .filter(Boolean),
+      content: String(data.content || ''),
     }
   } catch (error) {
     console.error('新闻加载失败：', error)
@@ -123,18 +121,12 @@ const sourceUrl = computed(() => {
         </div>
       </header>
 
-      <section
+      <NewsBody
         v-if="news.content?.length"
-        class="content"
-        aria-label="新闻正文"
-      >
-        <p
-          v-for="(paragraph, index) in news.content"
-          :key="index"
-        >
-          {{ paragraph }}
-        </p>
-      </section>
+        :content="news.content"
+        :source-type="news.source_type"
+        :title="news.title"
+      />
 
       <footer
         v-if="news.source || sourceUrl"
