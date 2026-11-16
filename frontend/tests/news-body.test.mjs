@@ -33,6 +33,28 @@ test('HTTP sources are clickable with safe new-window attributes', async () => {
   assert.match(html, /href="https:\/\/example.com\/article\?q=energy"/)
   assert.match(html, /target="_blank" rel="noopener noreferrer"/)
 })
+
+test('same brief date in Chinese and ISO notation omits only its first H1', async () => {
+  for (const [inner, outer] of [
+    ['新能源行业早报｜2026年11月16日', '新能源行业早报｜2026-11-16'],
+    ['新能源行业早报｜2026-11-16', '新能源行业早报｜2026年11月16日'],
+    ['新能源行业早报|2026年1月6日', '新能源行业早报｜2026-01-06'],
+  ]) {
+    const source = `# ${inner}\n\n### 第一部分：今日速览\n\n# 后续标题`
+    const html = await render(source, '新能源行业早报', outer)
+    assert.equal((html.match(/<h1\b/g) || []).length, 1)
+    assert.match(html, /<h1[^>]*>后续标题/)
+    assert.match(html, /第一部分：今日速览/)
+    assert.ok(source.startsWith(`# ${inner}`))
+  }
+})
+
+test('different dates, other article names and a first H2 remain visible', async () => {
+  for (const source of ['# 新能源行业早报｜2026年11月15日', '# 其他日报｜2026年11月16日']) {
+    assert.match(await render(source, '新能源行业早报', '新能源行业早报｜2026-11-16'), /<h1\b/)
+  }
+  assert.match(await render('## 新能源行业早报｜2026年11月16日', '新能源行业早报', '新能源行业早报｜2026-11-16'), /<h2\b/)
+})
 test('HTML, iframe, event attributes and images never become active nodes', async () => {
   const html = await render('<script>alert(1)</script>\n\n<iframe src="https://example.com"></iframe>\n\n<img src=x onerror=alert(1)>\n\n![图](https://example.com/pixel.png)\n\n<svg onload=alert(1)>')
   assert.doesNotMatch(html, /<(script|iframe|img|svg)\b/)

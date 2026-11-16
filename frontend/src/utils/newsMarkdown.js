@@ -14,13 +14,21 @@ export function safeNewsLink(value) {
   }
 }
 
+// Compare only the brief's known title/date forms; never rewrite stored Markdown.
+function briefTitleKey(value) {
+  const title = value.trim()
+  const date = /^新能源行业早报[｜|]\s*(\d{4})(?:年(\d{1,2})月(\d{1,2})日|-(\d{2})-(\d{2}))$/.exec(title)
+  if (!date) return title
+  return `新能源行业早报｜${date[1]}-${(date[2] || date[4]).padStart(2, '0')}-${(date[3] || date[5]).padStart(2, '0')}`
+}
+
 // Never render parser-generated HTML or copy arbitrary token attributes to the DOM.
 export function markdownNodes(content, title = '') {
   const tokens = parser.parse(String(content || ''), {})
   if (tokens[0]?.type === 'heading_open' && tokens[0].tag === 'h1' &&
       tokens[1]?.type === 'inline' && tokens[2]?.type === 'heading_close') {
     const text = (tokens[1].children || []).map(t => t.content).join('').trim()
-    if (title.trim() && text === title.trim()) tokens.splice(0, 3)
+    if (title.trim() && briefTitleKey(text) === briefTitleKey(title)) tokens.splice(0, 3)
   }
   function render(list) {
     const root = []
