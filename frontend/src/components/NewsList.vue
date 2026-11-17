@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import { getNewsTypeLabel } from '../utils/newsType'
 import SectionMasthead from './SectionMasthead.vue'
 import ChevronRight from './ChevronRight.vue'
 
@@ -88,7 +89,7 @@ onMounted(() => {
           :aria-label="news.title"
         >
           <div class="news-meta">
-            <span class="news-type">{{ news.type }}</span>
+            <span class="news-type">{{ getNewsTypeLabel(news.type) }}</span>
             <time class="news-date" :datetime="news.date">{{ news.date }}</time>
           </div>
           <div class="news-content">

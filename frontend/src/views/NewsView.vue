@@ -7,6 +7,7 @@ import {
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import { getNewsTypeLabel } from '../utils/newsType'
 
 const newsList = ref([])
 const failedImageIds = ref([])
@@ -91,7 +92,7 @@ onMounted(() => {
       <span>新闻筛选</span>
       <select v-model="newsFilter" aria-label="新闻筛选">
         <option value="all">全部新闻</option>
-        <option value="brief">新能源行业早报</option>
+        <option value="brief">行业报告</option>
         <option value="other">其他新闻</option>
       </select>
     </label>
@@ -139,7 +140,7 @@ onMounted(() => {
               :class="getTypeClass(news.type)"
             >
               <span class="cover-mark">NEWS</span>
-              <strong>{{ news.type }}</strong>
+              <strong>{{ getNewsTypeLabel(news.type) }}</strong>
             </div>
           </div>
 
@@ -149,7 +150,7 @@ onMounted(() => {
                 class="type"
                 :class="getTypeClass(news.type)"
               >
-                {{ news.type }}
+                {{ getNewsTypeLabel(news.type) }}
               </span>
               <time :datetime="news.date">{{ news.date }}</time>
             </div>

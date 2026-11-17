@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import { getNewsTypeLabel } from '../utils/newsType'
 import NewsBody from '../components/NewsBody.vue'
 
 const route = useRoute()
@@ -99,7 +100,7 @@ const sourceUrl = computed(() => {
 
       <header class="article-header">
         <div class="meta">
-          <span class="type">{{ news.type }}</span>
+          <span class="type">{{ getNewsTypeLabel(news.type) }}</span>
           <time :datetime="news.date">{{ news.date }}</time>
         </div>
 

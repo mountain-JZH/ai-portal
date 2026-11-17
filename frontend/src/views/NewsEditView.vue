@@ -213,7 +213,7 @@ watch(newsId, (id) => loadNews(id), { immediate: true })
             <option value="行业资讯">行业资讯</option>
             <option value="AI资讯">AI资讯</option>
             <option value="通知公告">通知公告</option>
-            <option value="新能源行业早报">新能源行业早报</option>
+            <option value="新能源行业早报">行业报告</option>
           </select>
         </label>
 

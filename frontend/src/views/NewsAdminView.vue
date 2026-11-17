@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import { API_BASE_URL } from '../config/api'
+import { getNewsTypeLabel } from '../utils/newsType'
 import { adminFetch } from '../utils/adminAuth'
 
 const newsList = ref([])
@@ -213,7 +214,7 @@ onMounted(() => {
                   {{ news.title }}
                 </RouterLink>
               </td>
-              <td>{{ news.source_type || '—' }}</td>
+              <td>{{ getNewsTypeLabel(news.source_type) || '—' }}</td>
               <td>{{ news.publish_date || '—' }}</td>
               <td>{{ news.source || '—' }}</td>
               <td>
